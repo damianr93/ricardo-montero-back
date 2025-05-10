@@ -8,28 +8,28 @@ export class ProductService {
 
     constructor(
         private readonly fileUploadService = new FileUploadService()
-    ){}
+    ) { }
 
     async createProduct(createProductDto: CreateProductDto, file?: UploadedFile) {
 
-        const productExists = await ProductModel.findOne({name: createProductDto.name});
-        if(productExists) throw CustomError.badRequest('Product already exists');
+        const productExists = await ProductModel.findOne({ name: createProductDto.name });
+        if (productExists) throw CustomError.badRequest('Product already exists');
 
         try {
             // Subir la imagen si existe
             let imageFileName: string | undefined;
             if (file) {
-                const { fileName } = await this.fileUploadService.uploadSingle(file, '/uploads/products');
+                const { fileName } = await this.fileUploadService.uploadSingle(file, 'uploads/products');
                 imageFileName = fileName;
             }
-            
+
             const product = new ProductModel({
                 ...createProductDto,
                 img: imageFileName
             });
 
             await product.save();
-  
+
             return product;
 
         } catch (error) {
@@ -37,8 +37,7 @@ export class ProductService {
         }
     }
 
-    async getProduct(paginationDto: PaginationDto) {
-
+    async getProduct(paginationDto: PaginationDto, isAuthenticated: boolean = true) {
         const { page, limit } = paginationDto;
 
         try {
@@ -46,18 +45,36 @@ export class ProductService {
                 ProductModel.countDocuments(),
                 ProductModel.find()
                     .skip((page - 1) * limit)
-                    .limit(limit) 
+                    .limit(limit)
                     .populate('category')
                     .populate('user')
             ]);
 
+            
+            if (!isAuthenticated) {
+                return {
+                    page: page,
+                    limit: limit,
+                    total: total,
+                    products: products.map(product => ({
+                        id: product._id,
+                        img: product.img,
+                        name: product.name,
+                        title: product.title,
+                        description: product.description,
+                        category: product.category,
+                    }))
+                };
+            }
+
+            // Si el usuario está autenticado, devolvemos todos los datos
             return {
-                page: page, 
+                page: page,
                 limit: limit,
                 total: total,
                 products: products
             };
-            
+
         } catch (error) {
             throw CustomError.internarlServer('Internal server error');
         }
@@ -70,16 +87,12 @@ export class ProductService {
             if (!existingProduct) {
                 throw CustomError.notFound('Product not found');
             }
-
-            // Subir imagen si se proporciona
+            
             let imageUpdate = {};
             if (file) {
-                const { fileName } = await this.fileUploadService.uploadSingle(file, '/uploads/products');
+                const { fileName } = await this.fileUploadService.uploadSingle(file, 'uploads/products');
                 imageUpdate = { img: fileName };
-                
-                // Si hay una imagen anterior, podríamos eliminarla aquí
-                // Si existingProduct.img tiene valor, podríamos borrar ese archivo
-                // pero primero verifica que el archivo exista
+
             }
 
             // Actualizar el producto con los nuevos datos y la imagen si existe
@@ -91,15 +104,30 @@ export class ProductService {
                 },
                 { new: true }
             )
-            .populate('category')
-            .populate('user');
+                .populate('category')
+                .populate('user');
 
             if (!updatedProduct) {
                 throw CustomError.badRequest('Could not update product');
             }
 
             return updatedProduct;
-            
+
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw error;
+            }
+            throw CustomError.internarlServer(`${error}`);
+        }
+    }
+
+    async deleteProduct(id: string) {
+        try {
+            const product = await ProductModel.findByIdAndDelete(id);
+            if (!product) {
+                throw CustomError.notFound('Product not found');
+            }
+            return product;
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;

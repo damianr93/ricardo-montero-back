@@ -26,7 +26,7 @@ export class CategoryController {
         const [error, createCategoryDto] = CreateCategoryDto.create(req.body)
         if (error) return res.status(400).json(error)
 
-        this.categoryService.createCategory(createCategoryDto!, req.body.user)
+        this.categoryService.createCategory(createCategoryDto!, (req as any).user.id)
             .then(category => res.status(201).json(category))
             .catch(error => this.handleError(error, res))
     };
@@ -49,9 +49,20 @@ export class CategoryController {
 
         if (error) return res.status(400).json(error)
 
-        this.categoryService.updateCategory(id, updateCategory!, userId)
+        this.categoryService.updateCategory(id, updateCategory!, (req as any).user.id)
             .then(category => res.status(201).json(category))
             .catch(error => this.handleError(error, res))
     };
+
+    deleteCategory = async (req: Request, res: Response) => {
+
+        const { id } = req.params
+        // const userId = (req as any).user.id
+
+        this.categoryService.deleteCategory(id)
+            .then(() => res.status(204).json({}))
+            .catch(error => this.handleError(error, res))
+
+    }
 
 };

@@ -8,7 +8,7 @@ export class CategoryService {
 
     constructor() { }
 
-    async createCategory(createCategoryDto: CreateCategoryDto, user: UserEntity) {
+    async createCategory(createCategoryDto: CreateCategoryDto, userId: UserEntity) {
 
         const categoryExists = await CategoryModel.findOne({ name: createCategoryDto.name });
         if (categoryExists) throw CustomError.badRequest('category already exists');
@@ -17,7 +17,7 @@ export class CategoryService {
 
             const category = new CategoryModel({
                 ...createCategoryDto,
-                user: user.id
+                user: userId
             });
 
             await category.save()
@@ -69,7 +69,7 @@ export class CategoryService {
 
     };
 
-    async updateCategory(id: string, udpateCategoryDto: UpdateCategoryDto, user: UserEntity) {
+    async updateCategory(id: string, udpateCategoryDto: UpdateCategoryDto, userId: UserEntity) {
 
         const categoryExists = await CategoryModel.findById(id);
         if (!categoryExists) throw CustomError.badRequest('Category not found');
@@ -79,7 +79,7 @@ export class CategoryService {
                 id,
                 {
                     ...udpateCategoryDto,
-                    user: user.id
+                    user: userId
                 },
                 { new: true }
             );
@@ -91,6 +91,20 @@ export class CategoryService {
                 name: updatedCategory.name,
                 available: updatedCategory.available
             };
+
+        } catch (error) {
+            throw CustomError.internarlServer(`${error}`);
+        }
+    };
+
+    async deleteCategory(id: string,) {
+
+        const categoryExists = await CategoryModel.findById(id);
+        if (!categoryExists) throw CustomError.badRequest('Category not found');
+
+        try {
+            const updatedCategory = await CategoryModel.findByIdAndDelete(id)
+            return true
 
         } catch (error) {
             throw CustomError.internarlServer(`${error}`);
