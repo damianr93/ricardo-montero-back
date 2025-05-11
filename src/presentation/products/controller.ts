@@ -31,24 +31,35 @@ export class ProductController {
         if (error) return res.status(400).json(error);
 
         // Manejar la imagen si existe
-        let file: UploadedFile | undefined;
+        let files: UploadedFile[] = [];
         if (req.files && typeof req.files === 'object') {
-            // Si hay un campo específico llamado 'img' o 'image'
-            if ('img' in req.files) {
-                file = req.files.img as UploadedFile;
-            } else if ('image' in req.files) {
-                file = req.files.image as UploadedFile;
-            } else {
-                // Obtener el primer archivo de cualquier campo
-                const fileKeys = Object.keys(req.files);
-                if (fileKeys.length > 0) {
-                    const firstFileField = req.files[fileKeys[0]];
-                    file = Array.isArray(firstFileField) ? firstFileField[0] : firstFileField;
+            // Aceptar múltiples imágenes bajo el campo 'images' o 'img'
+            const fileFields = ['img', 'image', 'images'];
+
+            fileFields.forEach(field => {
+                const value = req.files![field];
+                if (value) {
+                    if (Array.isArray(value)) {
+                        files.push(...value);
+                    } else {
+                        files.push(value);
+                    }
                 }
+            });
+
+            // Si no hay coincidencias directas, tomamos todos los archivos del objeto
+            if (files.length === 0) {
+                Object.values(req.files).forEach(file => {
+                    if (Array.isArray(file)) {
+                        files.push(...file);
+                    } else {
+                        files.push(file);
+                    }
+                });
             }
         }
 
-        this.productService.createProduct(createProductDto!, file)
+        this.productService.createProduct(createProductDto!, files)
             .then(product => res.status(201).json(product))
             .catch(error => this.handleError(error, res))
     };
@@ -60,7 +71,7 @@ export class ProductController {
         if (error) return res.status(400).json({ error })
 
         const isAuthenticated = (req as any).user !== undefined;
- 
+
         this.productService.getProduct(paginationDto!, isAuthenticated)
             .then(products => res.json(products))
             .catch(error => this.handleError(error, res))
@@ -78,24 +89,34 @@ export class ProductController {
         if (error) return res.status(400).json(error);
 
         // Manejar la imagen si existe
-        let file: UploadedFile | undefined;
+        let files: UploadedFile[] = [];
         if (req.files && typeof req.files === 'object') {
-            // Si hay un campo específico llamado 'img' o 'image'
-            if ('img' in req.files) {
-                file = req.files.img as UploadedFile;
-            } else if ('image' in req.files) {
-                file = req.files.image as UploadedFile;
-            } else {
-                // Obtener el primer archivo de cualquier campo
-                const fileKeys = Object.keys(req.files);
-                if (fileKeys.length > 0) {
-                    const firstFileField = req.files[fileKeys[0]];
-                    file = Array.isArray(firstFileField) ? firstFileField[0] : firstFileField;
+            // Aceptar múltiples imágenes bajo el campo 'images' o 'img'
+            const fileFields = ['img', 'image', 'images'];
+
+            fileFields.forEach(field => {
+                const value = req.files![field];
+                if (value) {
+                    if (Array.isArray(value)) {
+                        files.push(...value);
+                    } else {
+                        files.push(value);
+                    }
                 }
+            });
+
+            // Si no hay coincidencias directas, tomamos todos los archivos del objeto
+            if (files.length === 0) {
+                Object.values(req.files).forEach(file => {
+                    if (Array.isArray(file)) {
+                        files.push(...file);
+                    } else {
+                        files.push(file);
+                    }
+                });
             }
         }
-
-        this.productService.updateProduct(id, updateProductDto!, file)
+        this.productService.updateProduct(id, updateProductDto!, files)
             .then(product => res.json(product))
             .catch(error => this.handleError(error, res))
     };

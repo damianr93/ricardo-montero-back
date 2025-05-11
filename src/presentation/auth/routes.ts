@@ -31,7 +31,7 @@ export class AuthRoutes {
     router.post('/register', controller.registerUser);
     router.patch('/update/:id', AuthMiddleware.validateJWT, controller.updateUser);
     router.put('/me', AuthMiddleware.validateJWT, controller.me);
-    router.post('/logout', AuthMiddleware.validateJWT, controller.logoutUser);
+    router.post('/logout',controller.logoutUser);
 
     // router.get('/validate-email/:token', controller.valitateEmail );
 

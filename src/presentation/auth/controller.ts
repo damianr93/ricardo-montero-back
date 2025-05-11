@@ -79,7 +79,6 @@ export class AuthController {
         if (dtoError) return res.status(400).json({ error: dtoError });
 
         try {
-            console.log(file)
             const updated = await this.authService.updateUser(userId, updateDto!, file);
             res.json(updated);
         } catch (err) {

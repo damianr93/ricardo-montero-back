@@ -10,27 +10,27 @@ export class ProductService {
         private readonly fileUploadService = new FileUploadService()
     ) { }
 
-    async createProduct(createProductDto: CreateProductDto, file?: UploadedFile) {
+    async createProduct(createProductDto: CreateProductDto, files?: UploadedFile[]) {
 
         const productExists = await ProductModel.findOne({ name: createProductDto.name });
         if (productExists) throw CustomError.badRequest('Product already exists');
 
         try {
             // Subir la imagen si existe
-            let imageFileName: string | undefined;
-            if (file) {
-                const { fileName } = await this.fileUploadService.uploadSingle(file, 'uploads/products');
-                imageFileName = fileName;
+            let imageNames: string[] = [];
+            if (files && files.length > 0) {
+                imageNames = (await this.fileUploadService.uploadMultiple(files, 'uploads/products'))
+                    .map(res => res.fileName);
             }
-
             const product = new ProductModel({
                 ...createProductDto,
-                img: imageFileName
+                img: imageNames
             });
 
-            await product.save();
+            const savedProduct = await product.save();
+            await savedProduct.populate('category');
 
-            return product;
+            return savedProduct;
 
         } catch (error) {
             throw CustomError.internarlServer(`${error}`);
@@ -50,7 +50,7 @@ export class ProductService {
                     .populate('user')
             ]);
 
-            
+
             if (!isAuthenticated) {
                 return {
                     page: page,
@@ -63,6 +63,7 @@ export class ProductService {
                         title: product.title,
                         description: product.description,
                         category: product.category,
+                        available: product.available,
                     }))
                 };
             }
@@ -80,27 +81,32 @@ export class ProductService {
         }
     }
 
-    async updateProduct(id: string, updateProductDto: UpdateProductDto, file?: UploadedFile) {
+    async updateProduct(id: string, updateProductDto: UpdateProductDto, files?: UploadedFile[]) {
         try {
             // Verificar si el producto existe
             const existingProduct = await ProductModel.findById(id);
             if (!existingProduct) {
                 throw CustomError.notFound('Product not found');
             }
-            
-            let imageUpdate = {};
-            if (file) {
-                const { fileName } = await this.fileUploadService.uploadSingle(file, 'uploads/products');
-                imageUpdate = { img: fileName };
+            const currentImages = updateProductDto.img ? updateProductDto.img : [];
+            const previousImages = existingProduct.img ? existingProduct.img : [];
+            const imagesToDelete = previousImages.filter(img => !currentImages.includes(img));
 
+            let imageNames: string[] = [];
+
+            if (files && files.length > 0) {
+                const uploaded = await this.fileUploadService.uploadMultiple(files, 'uploads/products');
+                imageNames = uploaded.map(res => res.fileName);
             }
 
-            // Actualizar el producto con los nuevos datos y la imagen si existe
+            // Combinar anteriores con nuevas
+            const combinedImages = [...previousImages, ...imageNames];
+            const newImagenes = combinedImages.filter(img => !imagesToDelete.includes(img))
             const updatedProduct = await ProductModel.findByIdAndUpdate(
                 id,
                 {
                     ...updateProductDto,
-                    ...imageUpdate
+                    img: newImagenes
                 },
                 { new: true }
             )

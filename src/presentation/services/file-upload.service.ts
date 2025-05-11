@@ -36,7 +36,7 @@ export class FileUploadService {
             const filePath = path.join(destination, fileName);
 
             await new Promise((resolve, reject) => {
-                file.mv(filePath, (err) => {
+                file.mv(filePath, (err: any) => {
                     if (err) return reject(err);
                     resolve(null);
                 });

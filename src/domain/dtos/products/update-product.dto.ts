@@ -10,7 +10,7 @@ export class UpdateProductDto {
         public readonly description: string,
         public readonly user: string,
         public readonly category: string,
-        public readonly img?:string
+        public readonly img?:string[]
     ){};
 
     static create( props: {[key:string]:any}):[string?,UpdateProductDto?]{
