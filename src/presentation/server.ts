@@ -30,11 +30,11 @@ export class Server {
 
 
     //* Middlewares
-    const FRONT_URL = process.env.FRONT_URL || 'http://localhost:5179';
+    const FRONT_URL = 'https://ricardo-monteros-flores.netlify.app/';
     this.app.use(cookieParser());
     this.app.use(cors({
-      origin: FRONT_URL,      // el origen de tu front
-      credentials: true,      // permite cookies HTTP-only
+      origin: FRONT_URL,
+      credentials: true, 
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     }));
