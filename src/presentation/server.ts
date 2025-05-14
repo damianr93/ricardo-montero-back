@@ -30,7 +30,7 @@ export class Server {
 
 
     //* Middlewares
-    const FRONT_URL = 'https://ricardo-monteros-flores.netlify.app/';
+    const FRONT_URL = 'https://ricardo-monteros-flores.netlify.app';
     this.app.use(cookieParser());
     this.app.use(cors({
       origin: FRONT_URL,
