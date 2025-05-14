@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsnd --respawn --clear src/app.ts",
-    "build": "rm -rf ./dist && tsc",
+    "build": "rimraf ./dist && tsc",
     "start": "npm run build && node dist/app.js",
     "seed": "ts-node-dev ./src/data/seed/seed.ts"
   },
@@ -16,10 +16,10 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.18",
+    "@types/express": "^4.17.21",
     "@types/express-fileupload": "^1.4.4",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20.8.0",
+    "@types/node": "^20.17.47",
     "@types/nodemailer": "^6.4.14",
     "@types/uuid": "^9.0.7",
     "rimraf": "^5.0.10",
