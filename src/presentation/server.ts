@@ -30,7 +30,7 @@ export class Server {
 
 
     //* Middlewares
-    const FRONT_URL = process.env.FRONT_URL || 'http://localhost:5174';
+    const FRONT_URL = process.env.FRONT_URL || 'http://localhost:5179';
     this.app.use(cookieParser());
     this.app.use(cors({
       origin: FRONT_URL,      // el origen de tu front
