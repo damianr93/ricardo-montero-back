@@ -23,7 +23,7 @@ export const envs = {
   AWS_SECRET_ACCESS_KEY: get('AWS_SECRET_ACCESS_KEY').required().asString(),
   AWS_S3_BUCKET: get('AWS_S3_BUCKET').required().asString(),
 
-  SAMESITE: get('SAMESITE').required().asString(),
+  SAMESITE: get('SAMESITE').asString(),
 
 }
 
