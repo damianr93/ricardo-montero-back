@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fileUpload from 'express-fileupload';
 import cookieParser from 'cookie-parser'
+import { envs } from '../config';
 
 interface Options {
   port: number;
@@ -30,10 +31,10 @@ export class Server {
 
 
     //* Middlewares
-    const FRONT_URL = 'https://ricardo-monteros-flores.netlify.app';
+  
     this.app.use(cookieParser());
     this.app.use(cors({
-      origin: FRONT_URL,
+      origin: envs.FRONT_URL,
       credentials: true, 
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
@@ -41,7 +42,7 @@ export class Server {
 
     // para los preflight
     this.app.options('*', cors({
-      origin: FRONT_URL,
+      origin: envs.FRONT_URL,
       credentials: true
     }));
     this.app.use(express.json()); // raw
