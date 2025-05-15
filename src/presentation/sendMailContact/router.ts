@@ -17,7 +17,15 @@ sendEmailRouter.post(
   '/',
   (req: Request, res: Response, next: NextFunction) => {
     controller.sendOrder(req, res, next).catch(next);
-  }
+  },
 );
+
+sendEmailRouter.post(
+  '/contact',
+  (req: Request, res: Response, next: NextFunction) => {
+    controller.sendContact(req, res, next).catch(next);
+  },
+);
+
 
 export default sendEmailRouter;
