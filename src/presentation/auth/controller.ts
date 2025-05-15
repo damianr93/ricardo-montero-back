@@ -4,6 +4,7 @@ import { AuthService } from "../services/auth.service";
 import { LoginUserDto } from '../../domain/dtos/auth/login.user.dto';
 import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
 import { UploadedFile } from "express-fileupload";
+import { envs } from "../../config";
 
 
 
@@ -46,7 +47,7 @@ export class AuthController {
                 res.cookie('access_token', token, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict',
+                    sameSite: envs.SAMESITE === 'strict' ? envs.SAMESITE : "none",
                     maxAge: 1000 * 60 * 60 * 24,
                     path: '/'
                 });
@@ -101,7 +102,7 @@ export class AuthController {
             .clearCookie('access_token', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                sameSite: envs.SAMESITE === 'strict' ? envs.SAMESITE : "none",
                 path: '/'
             })  
             .clearCookie('refresh_token')
