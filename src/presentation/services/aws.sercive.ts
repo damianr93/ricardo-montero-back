@@ -26,7 +26,7 @@ export class AwsService {
       Key: key,
       Body: body,
       ContentType: contentType,
-      ACL: 'public-read',
+      // ACL: 'public-read',
       CacheControl: 'max-age=0',
     })
     await this.s3Client.send(cmd)
