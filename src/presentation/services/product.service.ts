@@ -16,7 +16,7 @@ export class ProductService {
         if (productExists) throw CustomError.badRequest('Product already exists');
 
         try {
-            // Subir la imagen si existe
+
             let imageNames: string[] = [];
             if (files && files.length > 0) {
                 imageNames = (await this.fileUploadService.uploadMultiple(files, 'uploads/products'))
@@ -83,30 +83,51 @@ export class ProductService {
 
     async updateProduct(id: string, updateProductDto: UpdateProductDto, files?: UploadedFile[]) {
         try {
-            // Verificar si el producto existe
             const existingProduct = await ProductModel.findById(id);
             if (!existingProduct) {
                 throw CustomError.notFound('Product not found');
             }
-            const currentImages = updateProductDto.img ? updateProductDto.img : [];
-            const previousImages = existingProduct.img ? existingProduct.img : [];
-            const imagesToDelete = previousImages.filter(img => !currentImages.includes(img));
 
-            let imageNames: string[] = [];
+            console.log('UpdateProductDto:', updateProductDto);
+            console.log('Type of updateProductDto.img:', typeof updateProductDto.img);
+            console.log('Raw updateProductDto.img:', updateProductDto.img);
 
-            if (files && files.length > 0) {
-                const uploaded = await this.fileUploadService.uploadMultiple(files, 'uploads/products');
-                imageNames = uploaded.map(res => res.fileName);
+            // Imágenes que vienen del frontend (seleccionadas del modal)
+            let currentImages: string[] = [];
+            if (updateProductDto.img) {
+                if (typeof updateProductDto.img === 'string') {
+                    try {
+                        // Si es un string, intentar parsearlo como JSON
+                        currentImages = JSON.parse(updateProductDto.img);
+                    } catch (e) {
+                        // Si no se puede parsear, asumir que es un string individual
+                        currentImages = [updateProductDto.img];
+                    }
+                } else if (Array.isArray(updateProductDto.img)) {
+                    currentImages = updateProductDto.img;
+                }
             }
 
-            // Combinar anteriores con nuevas
-            const combinedImages = [...previousImages, ...imageNames];
-            const newImagenes = combinedImages.filter(img => !imagesToDelete.includes(img))
+            const previousImages = existingProduct.img ? existingProduct.img : [];
+
+            const imagesToDelete = previousImages.filter(img => !currentImages.includes(img));
+
+            let newImageNames: string[] = [];
+            if (files && files.length > 0) {
+                const uploaded = await this.fileUploadService.uploadMultiple(files, 'uploads/products');
+                newImageNames = uploaded.map(res => res.fileName);
+                console.log('New uploaded images:', newImageNames);
+            }
+
+            const finalImages = [...currentImages, ...newImageNames];
+
+            console.log('Final images for product:', finalImages);
+
             const updatedProduct = await ProductModel.findByIdAndUpdate(
                 id,
                 {
                     ...updateProductDto,
-                    img: newImagenes
+                    img: finalImages
                 },
                 { new: true }
             )
@@ -116,6 +137,11 @@ export class ProductService {
             if (!updatedProduct) {
                 throw CustomError.badRequest('Could not update product');
             }
+
+            // Opcional:eliminar las imágenes físicas que ya no se usan
+            // if (imagesToDelete.length > 0) {
+            //     await this.fileUploadService.deleteMultiple(imagesToDelete);
+            // }
 
             return updatedProduct;
 

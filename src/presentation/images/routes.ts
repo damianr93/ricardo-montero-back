@@ -11,11 +11,11 @@ export class ImageRoutes {
         const controller = new ImageController()
 
         router.get('/:type/:img', controller.getImage)
+        router.get('/allimages', controller.getAllImages)
+        router.delete('/images/:key', controller.deleteImage);
 
 
         return router;
 
-
     }
-
 }

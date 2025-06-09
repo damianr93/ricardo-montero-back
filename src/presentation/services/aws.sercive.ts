@@ -1,7 +1,8 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { PutObjectCommand, S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { envs } from '../../config'
 
 export class AwsService {
+
   private s3Client = new S3Client({
     region: envs.AWS_REGION,
     credentials: {
@@ -31,4 +32,110 @@ export class AwsService {
     })
     await this.s3Client.send(cmd)
   }
+
+  /**
+   * Lista todas las imágenes del bucket S3.
+   * @param prefix Prefijo opcional para filtrar por carpeta (p. ej. 'uploads/')
+   * @returns Array de objetos con información de las imágenes
+   */
+  async listImages(prefix?: string) {
+    const cmd = new ListObjectsV2Command({
+      Bucket: envs.AWS_S3_BUCKET,
+      Prefix: prefix,
+    })
+
+    const response = await this.s3Client.send(cmd)
+
+    if (!response.Contents) {
+      return []
+    }
+
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+
+    const images = response.Contents
+      .filter(object => {
+        if (!object.Key) return false
+        const extension = object.Key.toLowerCase().substring(object.Key.lastIndexOf('.'))
+        return imageExtensions.includes(extension)
+      })
+      .map(object => ({
+        key: object.Key!,
+        size: object.Size || 0,
+        lastModified: object.LastModified || new Date(),
+        url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
+      }))
+
+    return images
+  }
+
+  /**
+   * Lista todas las imágenes del bucket S3 con paginación.
+   * @param prefix Prefijo opcional para filtrar por carpeta
+   * @param maxKeys Número máximo de resultados por página (default: 1000)
+   * @param continuationToken Token para paginación
+   * @returns Objeto con las imágenes y token de continuación
+   */
+  async listImagesPaginated(
+    prefix?: string,
+    maxKeys: number = 1000,
+    continuationToken?: string
+  ) {
+    const cmd = new ListObjectsV2Command({
+      Bucket: envs.AWS_S3_BUCKET,
+      Prefix: prefix,
+      MaxKeys: maxKeys,
+      ContinuationToken: continuationToken,
+    })
+
+    const response = await this.s3Client.send(cmd)
+
+    if (!response.Contents) {
+      return {
+        images: [],
+        nextToken: null,
+        hasMore: false
+      }
+    }
+
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+
+    const images = response.Contents
+      .filter(object => {
+        if (!object.Key) return false
+        const extension = object.Key.toLowerCase().substring(object.Key.lastIndexOf('.'))
+        return imageExtensions.includes(extension)
+      })
+      .map(object => ({
+        key: object.Key!,
+        size: object.Size || 0,
+        lastModified: object.LastModified || new Date(),
+        url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
+      }))
+
+    return {
+      images,
+      nextToken: response.NextContinuationToken || null,
+      hasMore: response.IsTruncated || false
+    }
+  }
+
+  /**
+ * Elimina una imagen del bucket S3
+ * @param key Ruta completa del objeto a eliminar (p. ej. 'uploads/imagen.png')
+ */
+  async deleteImage(key: string): Promise<boolean> {
+    try {
+      const cmd = new DeleteObjectCommand({
+        Bucket: envs.AWS_S3_BUCKET,
+        Key: key,
+      });
+
+      await this.s3Client.send(cmd);
+      return true;
+    } catch (error) {
+      console.error('Error deleting image from S3:', error);
+      return false;
+    }
+  }
+
 }
