@@ -34,38 +34,47 @@ export class AwsService {
   }
 
   /**
-   * Lista todas las imágenes del bucket S3.
+   * Lista TODAS las imágenes del bucket S3 usando paginación automática.
    * @param prefix Prefijo opcional para filtrar por carpeta (p. ej. 'uploads/')
-   * @returns Array de objetos con información de las imágenes
+   * @returns Array de objetos con información de todas las imágenes
    */
   async listImages(prefix?: string) {
-    const cmd = new ListObjectsV2Command({
-      Bucket: envs.AWS_S3_BUCKET,
-      Prefix: prefix,
-    })
+    const allImages: any[] = [];
+    let continuationToken: string | undefined;
 
-    const response = await this.s3Client.send(cmd)
+    do {
+      const cmd = new ListObjectsV2Command({
+        Bucket: envs.AWS_S3_BUCKET,
+        Prefix: prefix,
+        MaxKeys: 1000, // Máximo permitido por S3
+        ContinuationToken: continuationToken,
+      });
 
-    if (!response.Contents) {
-      return []
-    }
+      const response = await this.s3Client.send(cmd);
 
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+      if (response.Contents && response.Contents.length > 0) {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
 
-    const images = response.Contents
-      .filter(object => {
-        if (!object.Key) return false
-        const extension = object.Key.toLowerCase().substring(object.Key.lastIndexOf('.'))
-        return imageExtensions.includes(extension)
-      })
-      .map(object => ({
-        key: object.Key!,
-        size: object.Size || 0,
-        lastModified: object.LastModified || new Date(),
-        url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
-      }))
+        const images = response.Contents
+          .filter(object => {
+            if (!object.Key) return false;
+            const extension = object.Key.toLowerCase().substring(object.Key.lastIndexOf('.'));
+            return imageExtensions.includes(extension);
+          })
+          .map(object => ({
+            key: object.Key!,
+            size: object.Size || 0,
+            lastModified: object.LastModified || new Date(),
+            url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
+          }));
 
-    return images
+        allImages.push(...images);
+      }
+
+      continuationToken = response.NextContinuationToken;
+    } while (continuationToken); // Continúa hasta obtener todos los objetos
+
+    return allImages;
   }
 
   /**
