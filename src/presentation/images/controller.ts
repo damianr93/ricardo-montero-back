@@ -27,17 +27,14 @@ export class ImageController {
 
     getAllImages = async (req: Request, res: Response) => {
         try {
-            const { prefix, page = '1', limit = '50' } = req.query;
+            const { prefix, page = '1', limit = '1000' } = req.query;
 
             const pageNum = parseInt(page as string);
             const limitNum = parseInt(limit as string);
 
-            // Si se especifica paginación
             if (pageNum > 1 || limitNum < 1000) {
-                // Para paginación necesitarías implementar lógica más compleja con tokens
-                // Por simplicidad, usamos el método básico con offset simulado
-                const allImages = await this.awsService.listImages(prefix as string);
 
+                const allImages = await this.awsService.listImages(prefix as string);
                 const startIndex = (pageNum - 1) * limitNum;
                 const endIndex = startIndex + limitNum;
                 const paginatedImages = allImages.slice(startIndex, endIndex);
@@ -58,7 +55,6 @@ export class ImageController {
                 });
             }
 
-            // Sin paginación - todas las imágenes
             const images = await this.awsService.listImages(prefix as string);
 
             res.json({
@@ -79,17 +75,16 @@ export class ImageController {
         }
     };
 
-    // Método alternativo con paginación real de S3
     getAllImagesWithRealPagination = async (req: Request, res: Response) => {
         try {
-            const { prefix, limit = '50', token } = req.query;
+            const { prefix, limit = '1000', token } = req.query;
 
             const limitNum = parseInt(limit as string);
 
             const result = await this.awsService.listImagesPaginated(
                 prefix as string,
                 limitNum,
-                token as string
+                token as string | undefined 
             );
 
             res.json({

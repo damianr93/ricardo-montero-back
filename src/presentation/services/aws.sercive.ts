@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand, S3Client, ListObjectsV2Command, DeleteObjectCommand, ListObjectsV2CommandOutput } from '@aws-sdk/client-s3'
 import { envs } from '../../config'
 
 export class AwsService {
@@ -38,41 +38,51 @@ export class AwsService {
    * @param prefix Prefijo opcional para filtrar por carpeta (p. ej. 'uploads/')
    * @returns Array de objetos con información de todas las imágenes
    */
-  async listImages(prefix?: string) {
-    const allImages: any[] = [];
-    let continuationToken: string | undefined;
+  async listImages(prefix?: string): Promise<
+    {
+      key: string;
+      size: number;
+      lastModified: Date;
+      url: string;
+    }[]
+  > {
+    const allImages: {
+      key: string;
+      size: number;
+      lastModified: Date;
+      url: string;
+    }[] = [];
 
-    do {
+    let continuationToken: string | undefined = undefined;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic'];
+
+    while (true) {
       const cmd = new ListObjectsV2Command({
-        Bucket: envs.AWS_S3_BUCKET,
+        Bucket: envs.AWS_S3_BUCKET!,
         Prefix: prefix,
-        MaxKeys: 1000, // Máximo permitido por S3
+        MaxKeys: 1000,
         ContinuationToken: continuationToken,
       });
 
-      const response = await this.s3Client.send(cmd);
+      const response: ListObjectsV2CommandOutput = await this.s3Client.send(cmd);
+      const contents = response.Contents ?? [];
+      for (const object of contents) {
+        if (!object.Key) continue;
 
-      if (response.Contents && response.Contents.length > 0) {
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+        const ext = object.Key.toLowerCase().slice(object.Key.lastIndexOf('.'));
+        if (!imageExtensions.includes(ext)) continue;
 
-        const images = response.Contents
-          .filter(object => {
-            if (!object.Key) return false;
-            const extension = object.Key.toLowerCase().substring(object.Key.lastIndexOf('.'));
-            return imageExtensions.includes(extension);
-          })
-          .map(object => ({
-            key: object.Key!,
-            size: object.Size || 0,
-            lastModified: object.LastModified || new Date(),
-            url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
-          }));
-
-        allImages.push(...images);
+        allImages.push({
+          key: object.Key,
+          size: object.Size ?? 0,
+          lastModified: object.LastModified ?? new Date(),
+          url: `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${object.Key}`,
+        });
       }
 
+      if (!response.IsTruncated) break;
       continuationToken = response.NextContinuationToken;
-    } while (continuationToken); // Continúa hasta obtener todos los objetos
+    }
 
     return allImages;
   }
@@ -106,7 +116,7 @@ export class AwsService {
       }
     }
 
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', ".heic"]
 
     const images = response.Contents
       .filter(object => {
