@@ -3,7 +3,6 @@ import { envs, Uuid } from '../../config'
 import { CustomError } from '../../domain'
 import { AwsService } from './aws.sercive';
 
-
 export class FileUploadService {
     constructor(
         private readonly uuid = Uuid.v4,
@@ -23,28 +22,33 @@ export class FileUploadService {
      */
     async uploadSingle(
         file: UploadedFile,
-        folder: string = 'uploads',
-        validExtensions: string[] = ['png', 'jpg', 'jpeg', 'gif']
+        folder = 'uploads',
+        validExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
+        productName?: string,
+        index?: number
     ): Promise<{ fileName: string; url: string }> {
-        // 1) Validar extensión
-        const ext = file.mimetype.split('/').pop() || ''
-        this.validateExtension(ext, validExtensions)
+        // validar extensión
+        const ext = (file.mimetype.split('/').pop() || '').toLowerCase();
+        this.validateExtension(ext, validExtensions);
 
-        // 2) Generar key único
-        const fileName = `${folder}/${this.uuid()}.${ext}`
-
-        // 3) Subir buffer a S3
-        try {
-            await this.aws.uploadBuffer(fileName, file.data, file.mimetype)
-        } catch (err) {
-            console.error('Error subiendo a S3:', err)
-            throw err
+        // preparar slug + UUID
+        const id = this.uuid();
+        let baseName: string;
+        if (productName) {
+            const slug = this.slugify(productName);
+            // si es array, agrega índice: e.g. “producto-1”
+            baseName = index != null ? `${slug}-${index}` : slug;
+        } else {
+            baseName = id;
         }
 
-        // 4) Construir URL pública (o privada según tu bucket)
-        const url = `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${fileName}`
+        // finalmente el fileName
+        const fileName = `${folder}/${baseName}-${id}.${ext}`;
 
-        return { fileName, url }
+        // subir y retornar
+        await this.aws.uploadBuffer(fileName, file.data, file.mimetype);
+        const url = `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${fileName}`;
+        return { fileName, url };
     }
 
     /**
@@ -53,10 +57,47 @@ export class FileUploadService {
     async uploadMultiple(
         files: UploadedFile[],
         folder: string = 'uploads',
-        validExtensions: string[] = ['png', 'jpg', 'jpeg', 'gif']
+        validExtensions: string[] = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
+        productName?: string // Hacer opcional
     ): Promise<Array<{ fileName: string; url: string }>> {
         return Promise.all(
-            files.map(f => this.uploadSingle(f, folder, validExtensions))
+            files.map((file, index) =>
+                this.uploadSingle(
+                    file,
+                    folder,
+                    validExtensions,
+                    productName,
+                    productName && files.length > 1 ? index : undefined
+                )
+            )
         )
+    }
+
+    /**
+     * Elimina múltiples archivos de S3
+     */
+    async deleteMultiple(fileNames: string[]): Promise<void> {
+        try {
+            await Promise.all(
+                fileNames.map(fileName => this.aws.deleteImage(fileName))
+            )
+        } catch (err) {
+            console.error('Error eliminando archivos de S3:', err)
+            throw err
+        }
+    }
+
+    private slugify(name: string): string {
+        return name
+            .trim()
+            .toLowerCase()
+            // descompone acentos (ñ → n, á → a, etc.)
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            // convierte espacios y guiones múltiples en un solo guión
+            .replace(/\s+/g, '-')
+            // elimina todo lo que no sea letra, número o guión
+            .replace(/[^a-z0-9\-]/g, '')
+            // quita guiones al inicio o final
+            .replace(/^-+|-+$/g, '');
     }
 }

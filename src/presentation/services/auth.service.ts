@@ -72,19 +72,10 @@ export class AuthService {
     public async updateUser(
         userId: string,
         updateDto: UpdateUserDto,
-        file?: UploadedFile
     ) {
         const user = await UserModel.findById(userId);
         if (!user) throw CustomError.badRequest('User not found');
 
-        // Si llega archivo, súbelo y guarda la ruta en img
-        if (file) {
-            const { fileName } = await this.fileUploadService.uploadSingle(
-                file,
-                `uploads/users`  // carpeta donde guardas perfiles
-            );
-            user.img = fileName;
-        }
 
         // Actualiza campos opcionales
         if (updateDto.name !== undefined) user.name = updateDto.name;

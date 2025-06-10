@@ -3,35 +3,38 @@ import mongoose, { Schema } from 'mongoose';
 
 const productSchema = new mongoose.Schema({
 
-    name:{
+    name: {
         type: String,
         required: [true, 'Name is required'],
-        unique:true
+        unique: true
     },
 
     available: {
         type: Boolean,
         default: false,
     },
+    codigo: {
+        type: String,
+    },
     price: {
-        type:Number,
+        type: Number,
         default: 0
     },
     title: {
-        type:String
+        type: String
     },
     description: {
-        type:String,
+        type: String,
     },
     user: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required:true
+        required: true
     },
     category: {
         type: Schema.Types.ObjectId,
         ref: 'Category',
-        required:true
+        required: true
     },
     img: {
         type: [String]
@@ -41,7 +44,7 @@ const productSchema = new mongoose.Schema({
 productSchema.set('toJSON', {
     virtuals: true,
     versionKey: false,
-    transform: function(doc, ret, options){
+    transform: function (doc, ret, options) {
         delete ret._id;
     }
 })

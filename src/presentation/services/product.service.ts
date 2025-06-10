@@ -19,8 +19,13 @@ export class ProductService {
 
             let imageNames: string[] = [];
             if (files && files.length > 0) {
-                imageNames = (await this.fileUploadService.uploadMultiple(files, 'uploads/products'))
-                    .map(res => res.fileName);
+                // Corregido: agregado el parámetro fileName
+                imageNames = (await this.fileUploadService.uploadMultiple(
+                    files, 
+                    'uploads/products', 
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], // validExtensions explícitas
+                    createProductDto.name // fileName
+                )).map(res => res.fileName);
             }
             const product = new ProductModel({
                 ...createProductDto,
@@ -68,7 +73,6 @@ export class ProductService {
                 };
             }
 
-            // Si el usuario está autenticado, devolvemos todos los datos
             return {
                 page: page,
                 limit: limit,
@@ -88,19 +92,12 @@ export class ProductService {
                 throw CustomError.notFound('Product not found');
             }
 
-            console.log('UpdateProductDto:', updateProductDto);
-            console.log('Type of updateProductDto.img:', typeof updateProductDto.img);
-            console.log('Raw updateProductDto.img:', updateProductDto.img);
-
-            // Imágenes que vienen del frontend (seleccionadas del modal)
             let currentImages: string[] = [];
             if (updateProductDto.img) {
                 if (typeof updateProductDto.img === 'string') {
                     try {
-                        // Si es un string, intentar parsearlo como JSON
                         currentImages = JSON.parse(updateProductDto.img);
                     } catch (e) {
-                        // Si no se puede parsear, asumir que es un string individual
                         currentImages = [updateProductDto.img];
                     }
                 } else if (Array.isArray(updateProductDto.img)) {
@@ -109,19 +106,21 @@ export class ProductService {
             }
 
             const previousImages = existingProduct.img ? existingProduct.img : [];
-
             const imagesToDelete = previousImages.filter(img => !currentImages.includes(img));
 
             let newImageNames: string[] = [];
             if (files && files.length > 0) {
-                const uploaded = await this.fileUploadService.uploadMultiple(files, 'uploads/products');
+                // Corregido: agregado el parámetro fileName
+                const uploaded = await this.fileUploadService.uploadMultiple(
+                    files, 
+                    'uploads/products', 
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], // validExtensions explícitas
+                    existingProduct.name // fileName
+                );
                 newImageNames = uploaded.map(res => res.fileName);
-                console.log('New uploaded images:', newImageNames);
             }
 
             const finalImages = [...currentImages, ...newImageNames];
-
-            console.log('Final images for product:', finalImages);
 
             const updatedProduct = await ProductModel.findByIdAndUpdate(
                 id,
@@ -138,7 +137,7 @@ export class ProductService {
                 throw CustomError.badRequest('Could not update product');
             }
 
-            // Opcional:eliminar las imágenes físicas que ya no se usan
+            // Opcional: eliminar las imágenes físicas que ya no se usan
             // if (imagesToDelete.length > 0) {
             //     await this.fileUploadService.deleteMultiple(imagesToDelete);
             // }
