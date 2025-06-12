@@ -66,7 +66,7 @@ export class SendOrderController {
                   `;
 
       const sendOptions: SendMailOptions = {
-        to: 'a.damianrodriguez.93@gmail.com',
+        to: 'ab.mariavirginiamontero@gmail.com',
         subject: `🛒 Nuevo pedido de ${name}`,
         htmlBody,
       };
@@ -117,7 +117,7 @@ export class SendOrderController {
     `;
 
       const sendOptions: SendMailOptions = {
-        to: 'a.damianrodriguez.93@gmail.com',
+        to: 'ab.mariavirginiamontero@gmail.com',
         subject: `Nueva consulta de ${name}`,
         htmlBody,
       };
