@@ -10,9 +10,9 @@ import { FileUploadService } from "./file-upload.service";
 
 export class AuthService {
 
-    //DI
+
     constructor(
-        // private readonly emailService:EmailService,
+
         private readonly fileUploadService: FileUploadService,
     ) { };
 
@@ -29,7 +29,7 @@ export class AuthService {
             user.password = bcryptAdapter.hash(registerUserDto.password)
             await user.save();
 
-            const token = await JwtAdapter.generateToken({ id: user.id })
+            const token = await JwtAdapter.generateToken({ id: user.id, role: user.role });
             if (!token) throw CustomError.internarlServer('Error while creating JWT')
 
             // this.sendEmailValidationLink(user.email);

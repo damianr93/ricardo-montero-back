@@ -33,7 +33,10 @@ export class AuthMiddleware {
             }
 
             // Pongo la entidad en req (puedes usar req.user si amplías la interfaz)
-            (req as any).user = UserEntity.fromObject(user);
+            (req as any).user = {
+                id: payload.id,
+                role: user.role,
+            };
 
             next();
         } catch (err) {
@@ -43,10 +46,10 @@ export class AuthMiddleware {
     }
 
     static optionalJWT = async (req: Request, res: Response, next: NextFunction) => {
-       
+
         let token = req.cookies.access_token;
 
-         if (!token) {
+        if (!token) {
             const authHeader = req.header('Authorization');
             if (!authHeader) {
                 return next();
@@ -65,7 +68,10 @@ export class AuthMiddleware {
                 return res.status(401).json({ error: 'Invalid token - user not found' });
             }
 
-            (req as any).user = UserEntity.fromObject(user);
+            (req as any).user = {
+                id: payload.id,
+                role: user.role,
+            };;
 
             next();
         } catch (err) {

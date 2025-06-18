@@ -22,6 +22,10 @@ export class CategoryController {
     };
 
     createCategory = async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to create category.' });
+        }
 
         const [error, createCategoryDto] = CreateCategoryDto.create(req.body)
         if (error) return res.status(400).json(error)
@@ -44,7 +48,11 @@ export class CategoryController {
 
     updateCategory = async (req: Request, res: Response) => {
         const { id } = req.params
-        const userId = (req as any).user.id
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to update category.' });
+        }
+
         const [error, updateCategory] = UpdateCategoryDto.update(req.body)
 
         if (error) return res.status(400).json(error)
@@ -57,7 +65,11 @@ export class CategoryController {
     deleteCategory = async (req: Request, res: Response) => {
 
         const { id } = req.params
-        // const userId = (req as any).user.id
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to delete category.' });
+        }
+
 
         this.categoryService.deleteCategory(id)
             .then(() => res.status(204).json({}))

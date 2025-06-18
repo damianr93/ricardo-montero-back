@@ -21,6 +21,11 @@ export class ProductController {
 
     createProduct = async (req: Request, res: Response) => {
 
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to create products.' });
+        }
+
         const [error, createProductDto] = CreateProductDto.create({
 
             ...req.body,
@@ -80,6 +85,10 @@ export class ProductController {
 
     updateProduct = async (req: Request, res: Response) => {
         const { id } = req.params;
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to edit products.' });
+        }
 
         const [error, updateProductDto] = UpdateProductDto.create({
             ...req.body,
@@ -123,6 +132,10 @@ export class ProductController {
 
     deleteProduct = async (req: Request, res: Response) => {
         const { id } = req.params;
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to delete products.' });
+        }
 
         this.productService.deleteProduct(id)
             .then(() => res.status(204).json({}))
