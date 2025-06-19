@@ -11,6 +11,7 @@ export class CreateProductDto {
         public readonly description: string,
         public readonly user: string,
         public readonly category: string,
+        public readonly codigo?: string | number,
         public readonly img?:string
     ){};
 
@@ -23,6 +24,7 @@ export class CreateProductDto {
             title,
             description,
             user,
+            codigo,
             category,
             img
         } = props;
@@ -43,6 +45,7 @@ export class CreateProductDto {
             description,
             user,
             category,
+            codigo,
             img
         )];
     };

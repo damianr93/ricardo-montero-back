@@ -12,19 +12,18 @@ export class ProductService {
 
     async createProduct(createProductDto: CreateProductDto, files?: UploadedFile[]) {
 
-        const productExists = await ProductModel.findOne({ name: createProductDto.name });
-        if (productExists) throw CustomError.badRequest('Product already exists');
+        const codigoExist = await ProductModel.findOne({ codigo: createProductDto.codigo})
+        if(codigoExist) throw CustomError.badRequest('Codigo already exists');
 
         try {
 
             let imageNames: string[] = [];
             if (files && files.length > 0) {
-                // Corregido: agregado el parámetro fileName
                 imageNames = (await this.fileUploadService.uploadMultiple(
                     files, 
                     'uploads/products', 
-                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], // validExtensions explícitas
-                    createProductDto.name // fileName
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], 
+                    createProductDto.name 
                 )).map(res => res.fileName);
             }
             const product = new ProductModel({
@@ -111,12 +110,12 @@ export class ProductService {
 
             let newImageNames: string[] = [];
             if (files && files.length > 0) {
-                // Corregido: agregado el parámetro fileName
+
                 const uploaded = await this.fileUploadService.uploadMultiple(
                     files, 
                     'uploads/products', 
-                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], // validExtensions explícitas
-                    existingProduct.name // fileName
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], 
+                    existingProduct.name 
                 );
                 newImageNames = uploaded.map(res => res.fileName);
             }
