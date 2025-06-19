@@ -12,18 +12,18 @@ export class ProductService {
 
     async createProduct(createProductDto: CreateProductDto, files?: UploadedFile[]) {
 
-        const codigoExist = await ProductModel.findOne({ codigo: createProductDto.codigo})
-        if(codigoExist) throw CustomError.badRequest('Codigo already exists');
+        const codigoExist = await ProductModel.findOne({ codigo: createProductDto.codigo })
+        if (codigoExist) throw CustomError.badRequest('Codigo already exists');
 
         try {
 
             let imageNames: string[] = [];
             if (files && files.length > 0) {
                 imageNames = (await this.fileUploadService.uploadMultiple(
-                    files, 
-                    'uploads/products', 
-                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], 
-                    createProductDto.name 
+                    files,
+                    'uploads/products',
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
+                    createProductDto.name
                 )).map(res => res.fileName);
             }
             const product = new ProductModel({
@@ -86,6 +86,15 @@ export class ProductService {
     }
 
     async updateProduct(id: string, updateProductDto: UpdateProductDto, files?: UploadedFile[]) {
+
+        if (updateProductDto.codigo != null) {
+            const codigoExist = await ProductModel.findOne({
+                codigo: updateProductDto.codigo,
+                _id: { $ne: id }
+            });
+            if (codigoExist) throw CustomError.badRequest('Código ya existe');
+        }
+        
         try {
             const existingProduct = await ProductModel.findById(id);
             if (!existingProduct) {
@@ -112,10 +121,10 @@ export class ProductService {
             if (files && files.length > 0) {
 
                 const uploaded = await this.fileUploadService.uploadMultiple(
-                    files, 
-                    'uploads/products', 
-                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], 
-                    existingProduct.name 
+                    files,
+                    'uploads/products',
+                    ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'],
+                    existingProduct.name
                 );
                 newImageNames = uploaded.map(res => res.fileName);
             }
