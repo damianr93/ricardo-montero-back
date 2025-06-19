@@ -66,6 +66,7 @@ export class ProductService {
                         img: product.img,
                         name: product.name,
                         title: product.title,
+                        codigo: product.codigo,
                         description: product.description,
                         category: product.category,
                         available: product.available,
