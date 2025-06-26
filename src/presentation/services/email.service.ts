@@ -1,4 +1,3 @@
-// File: src/services/email.service.ts
 import nodemailer, { Transporter, SendMailOptions as NodemailerOptions } from 'nodemailer';
 import { envs } from '../../config/envs';
 

@@ -6,11 +6,7 @@ import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
 import { UploadedFile } from "express-fileupload";
 import { envs } from "../../config";
 
-
-
 export class AuthController {
-
-    //*DI
     constructor(
         public readonly authService: AuthService
     ) { };
@@ -19,29 +15,22 @@ export class AuthController {
         if (error instanceof CustomError) {
             return res.status(error.statusCode).json({ error: error.message });
         }
-
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 
-
-
     registerUser = (req: Request, res: Response) => {
-
         const [error, registerDto] = RegisterUserDto.create(req.body);
-
         if (error) return res.status(400).json({ error });
 
         this.authService.registerUser(registerDto!)
-            .then((user) => res.json(user))
+            .then((result) => res.json(result))
             .catch(error => this.handleError(error, res));
-
     }
 
     loginUser = (req: Request, res: Response) => {
-
         const [error, loginUserDto] = LoginUserDto.create(req.body);
-
         if (error) return res.status(400).json({ error });
+
         this.authService.loginUser(loginUserDto!)
             .then(({ user, token }) => {
                 res.cookie('access_token', token, {
@@ -56,18 +45,58 @@ export class AuthController {
             .catch(err => this.handleError(err, res));
     }
 
+    approveUser = (req: Request, res: Response) => {
+        const { token } = req.params;
+        const adminEmail = req.query.admin_email as string;
+
+        this.authService.approveUser(token, adminEmail)
+            .then((result) => {
+                res.send(`
+                    <html>
+                        <head><title>Usuario Aprobado</title></head>
+                        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                            <div style="max-width: 500px; margin: 0 auto;">
+                                <h1 style="color: #28a745;">✅ Usuario Aprobado</h1>
+                                <p>El usuario ha sido aprobado exitosamente.</p>
+                                <p>Se ha enviado una confirmación por email.</p>
+                            </div>
+                        </body>
+                    </html>
+                `);
+            })
+            .catch(error => this.handleError(error, res));
+    }
+
+    rejectUser = (req: Request, res: Response) => {
+        const { token } = req.params;
+        const adminEmail = req.query.admin_email as string;
+
+        this.authService.rejectUser(token, adminEmail)
+            .then((result) => {
+                res.send(`
+                    <html>
+                        <head><title>Usuario Rechazado</title></head>
+                        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                            <div style="max-width: 500px; margin: 0 auto;">
+                                <h1 style="color: #dc3545;">❌ Usuario Rechazado</h1>
+                                <p>El usuario ha sido rechazado.</p>
+                                <p>Se ha enviado una notificación por email.</p>
+                            </div>
+                        </body>
+                    </html>
+                `);
+            })
+            .catch(error => this.handleError(error, res));
+    }
+
     updateUser = async (req: Request, res: Response) => {
-
-
         const userId = req.body.user.id as string;
 
         let file: UploadedFile | undefined;
         if (req.files && typeof req.files === 'object') {
-
             if ('file' in req.files) {
                 file = req.files.file as UploadedFile;
             } else {
-
                 const fileKeys = Object.keys(req.files);
                 if (fileKeys.length > 0) {
                     const firstFileField = req.files[fileKeys[0]];
@@ -88,7 +117,6 @@ export class AuthController {
     }
 
     me = async (req: Request, res: Response) => {
-        // authMiddleware ya validó la cookie y fijó req.userId
         try {
             const user = await this.authService.getUserById((req as any).user.id);
             res.json({ user });
@@ -104,17 +132,9 @@ export class AuthController {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: envs.SAMESITE === 'strict' ? envs.SAMESITE : "none",
                 path: '/'
-            })  
+            })
             .clearCookie('refresh_token')
             .status(200)
             .json({ message: 'Logged out successfully' });
     };
-
-    // valitateEmail = (req:Request, res: Response) => {
-
-    //     const {token} = req.params
-    //     this.authService.validateEmail(token)
-    //         .then(()=> res.json('Email validated'))
-    //         .catch(error => this.handleError(error, res))
-    // }
 }
