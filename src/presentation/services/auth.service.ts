@@ -1,119 +1,137 @@
 import { JwtAdapter, bcryptAdapter, envs } from "../../config";
 import { UserModel } from "../../data";
-import { CustomError, LoginUserDto, RegisterUserDto, UserEntity } from "../../domain";
+import {
+  CustomError,
+  LoginUserDto,
+  RegisterUserDto,
+  UserEntity,
+} from "../../domain";
 import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
 import { FileUploadService } from "./file-upload.service";
-import { EmailService } from './email.service';
-import { v4 as uuidv4 } from 'uuid';
+import { EmailService } from "./email.service";
+import { v4 as uuidv4 } from "uuid";
 
 export class AuthService {
-    constructor(
-        private readonly fileUploadService: FileUploadService,
-        private readonly emailService: EmailService,
-    ) { };
+  constructor(
+    private readonly fileUploadService: FileUploadService,
+    private readonly emailService: EmailService
+  ) {}
 
-    public async registerUser(registerUserDto: RegisterUserDto) {
-        const existUser = await UserModel.findOne({ email: registerUserDto.email });
-        if (existUser) throw CustomError.badRequest('Email already exists');
+  public async registerUser(registerUserDto: RegisterUserDto) {
+    const normalizedEmail = registerUserDto.email.toLowerCase();
 
-        try {
+    const existUser = await UserModel.findOne({
+      email: normalizedEmail,
+    });
+    if (existUser) throw CustomError.badRequest("Email already exists");
 
-            const approvalToken = uuidv4();
+    try {
+      const approvalToken = uuidv4();
 
-            const user = new UserModel({
-                ...registerUserDto,
-                approvalToken
-            });
+      const user = new UserModel({
+        ...registerUserDto,
+        email: normalizedEmail, // Guardar el email normalizado
+        approvalToken,
+      });
 
-            user.password = bcryptAdapter.hash(registerUserDto.password);
-            await user.save();
+      user.password = bcryptAdapter.hash(registerUserDto.password);
+      await user.save();
 
-            await this.sendApprovalEmailToAdmin(user, approvalToken);
+      await this.sendApprovalEmailToAdmin(user, approvalToken);
 
-            const { password, ...userEntity } = UserEntity.fromObject(user);
+      const { password, ...userEntity } = UserEntity.fromObject(user);
 
-            return {
-                user: userEntity,
-                message: 'Usuario registrado. Pendiente de aprobación por el administrador.'
-            };
+      return {
+        user: userEntity,
+        message:
+          "Usuario registrado. Pendiente de aprobación por el administrador.",
+      };
+    } catch (error) {
+      throw CustomError.internarlServer(`${error}`);
+    }
+  }
 
-        } catch (error) {
-            throw CustomError.internarlServer(`${error}`);
-        }
+  public async loginUser(loginUserDto: LoginUserDto) {
+    const user = await UserModel.findOne({
+      email: loginUserDto.email.toLowerCase(),
+    });
+    if (!user) throw CustomError.badRequest("Email not exists");
+
+    if (user.approvalStatus === "PENDING") {
+      throw CustomError.unauthorized(
+        "Tu cuenta está pendiente de aprobación por el administrador"
+      );
     }
 
-    public async loginUser(loginUserDto: LoginUserDto) {
-        const user = await UserModel.findOne({ email: loginUserDto.email });
-        if (!user) throw CustomError.badRequest('Email not exists');
-
-        if (user.approvalStatus === 'PENDING') {
-            throw CustomError.unauthorized('Tu cuenta está pendiente de aprobación por el administrador');
-        }
-
-        if (user.approvalStatus === 'REJECTED') {
-            throw CustomError.unauthorized('Tu cuenta ha sido rechazada por el administrador');
-        }
-
-        const isMatching = bcryptAdapter.compare(loginUserDto.password, user.password);
-        if (!isMatching) throw CustomError.badRequest('Invalid password');
-
-        const { password, ...userEntity } = UserEntity.fromObject(user);
-
-        const token = await JwtAdapter.generateToken({ id: user.id });
-        if (!token) throw CustomError.internarlServer('Error while creating JWT');
-
-        return {
-            user: userEntity,
-            token: token
-        };
+    if (user.approvalStatus === "REJECTED") {
+      throw CustomError.unauthorized(
+        "Tu cuenta ha sido rechazada por el administrador"
+      );
     }
 
-    public async approveUser(token: string, adminEmail?: string) {
-        const user = await UserModel.findOne({ approvalToken: token });
-        if (!user) throw CustomError.badRequest('Token de aprobación inválido');
+    const isMatching = bcryptAdapter.compare(
+      loginUserDto.password,
+      user.password
+    );
+    if (!isMatching) throw CustomError.badRequest("Invalid password");
 
-        if (user.approvalStatus !== 'PENDING') {
-            throw CustomError.badRequest('Este usuario ya ha sido procesado');
-        }
+    const { password, ...userEntity } = UserEntity.fromObject(user);
 
-        user.approvalStatus = 'APPROVED';
-        user.emailValidated = true;
-        user.approvedAt = new Date();
-        user.approvedBy = adminEmail || 'Admin';
-        user.approvalToken = undefined;
+    const token = await JwtAdapter.generateToken({ id: user.id });
+    if (!token) throw CustomError.internarlServer("Error while creating JWT");
 
-        await user.save();
+    return {
+      user: userEntity,
+      token: token,
+    };
+  }
 
-        await this.sendApprovalConfirmationToUser(user.email, user.name, true);
+  public async approveUser(token: string, adminEmail?: string) {
+    const user = await UserModel.findOne({ approvalToken: token });
+    if (!user) throw CustomError.badRequest("Token de aprobación inválido");
 
-        return { message: 'Usuario aprobado exitosamente' };
+    if (user.approvalStatus !== "PENDING") {
+      throw CustomError.badRequest("Este usuario ya ha sido procesado");
     }
 
-    public async rejectUser(token: string, adminEmail?: string) {
-        const user = await UserModel.findOne({ approvalToken: token });
-        if (!user) throw CustomError.badRequest('Token de aprobación inválido');
+    user.approvalStatus = "APPROVED";
+    user.emailValidated = true;
+    user.approvedAt = new Date();
+    user.approvedBy = adminEmail || "Admin";
+    user.approvalToken = undefined;
 
-        if (user.approvalStatus !== 'PENDING') {
-            throw CustomError.badRequest('Este usuario ya ha sido procesado');
-        }
+    await user.save();
 
-        user.approvalStatus = 'REJECTED';
-        user.rejectedAt = new Date();
-        user.rejectedBy = adminEmail || 'Admin';
-        user.approvalToken = undefined;
+    await this.sendApprovalConfirmationToUser(user.email, user.name, true);
 
-        await user.save();
+    return { message: "Usuario aprobado exitosamente" };
+  }
 
-        await this.sendApprovalConfirmationToUser(user.email, user.name, false);
+  public async rejectUser(token: string, adminEmail?: string) {
+    const user = await UserModel.findOne({ approvalToken: token });
+    if (!user) throw CustomError.badRequest("Token de aprobación inválido");
 
-        return { message: 'Usuario rechazado exitosamente' };
+    if (user.approvalStatus !== "PENDING") {
+      throw CustomError.badRequest("Este usuario ya ha sido procesado");
     }
 
-    private async sendApprovalEmailToAdmin(user: any, approvalToken: string) {
-        const approveUrl = `${envs.WEBSERVICE_URL}/api/auth/approve-user/${approvalToken}`;
-        const rejectUrl = `${envs.WEBSERVICE_URL}/api/auth/reject-user/${approvalToken}`;
+    user.approvalStatus = "REJECTED";
+    user.rejectedAt = new Date();
+    user.rejectedBy = adminEmail || "Admin";
+    user.approvalToken = undefined;
 
-        const html = `
+    await user.save();
+
+    await this.sendApprovalConfirmationToUser(user.email, user.name, false);
+
+    return { message: "Usuario rechazado exitosamente" };
+  }
+
+  private async sendApprovalEmailToAdmin(user: any, approvalToken: string) {
+    const approveUrl = `${envs.WEBSERVICE_URL}/api/auth/approve-user/${approvalToken}`;
+    const rejectUrl = `${envs.WEBSERVICE_URL}/api/auth/reject-user/${approvalToken}`;
+
+    const html = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -144,8 +162,12 @@ export class AuthService {
                         <h3>📋 Información del Usuario</h3>
                         <p><strong>Nombre:</strong> ${user.name}</p>
                         <p><strong>Email:</strong> ${user.email}</p>
-                        <p><strong>Fecha de registro:</strong> ${new Date().toLocaleString('es-ES')}</p>
-                        <p><strong>Rol solicitado:</strong> ${user.role.join(', ')}</p>
+                        <p><strong>Fecha de registro:</strong> ${new Date().toLocaleString(
+                          "es-ES"
+                        )}</p>
+                        <p><strong>Rol solicitado:</strong> ${user.role.join(
+                          ", "
+                        )}</p>
                     </div>
 
                     <p>Por favor, revisa la información y decide si aprobar o rechazar a este usuario:</p>
@@ -162,20 +184,26 @@ export class AuthService {
         </html>
         `;
 
-        const options = {
-            to: envs.ADMIN_EMAIL,
-            subject: '🔔 Nuevo usuario requiere aprobación',
-            htmlBody: html,
-        };
+    const options = {
+      to: envs.ADMIN_EMAIL,
+      subject: "🔔 Nuevo usuario requiere aprobación",
+      htmlBody: html,
+    };
 
-        const isSent = await this.emailService.sendEmail(options);
-        if (!isSent) throw CustomError.internarlServer('Error sending approval email');
+    const isSent = await this.emailService.sendEmail(options);
+    if (!isSent)
+      throw CustomError.internarlServer("Error sending approval email");
 
-        return true;
-    }
+    return true;
+  }
 
-    private async sendApprovalConfirmationToUser(email: string, name: string, approved: boolean) {
-        const html = approved ? `
+  private async sendApprovalConfirmationToUser(
+    email: string,
+    name: string,
+    approved: boolean
+  ) {
+    const html = approved
+      ? `
         <!DOCTYPE html>
         <html>
         <head>
@@ -207,7 +235,8 @@ export class AuthService {
             </div>
         </body>
         </html>
-        ` : `
+        `
+      : `
         <!DOCTYPE html>
         <html>
         <head>
@@ -237,34 +266,34 @@ export class AuthService {
         </html>
         `;
 
-        const options = {
-            to: email,
-            subject: approved ? '🎉 Cuenta aprobada' : '❌ Cuenta no aprobada',
-            htmlBody: html,
-        };
+    const options = {
+      to: email,
+      subject: approved ? "🎉 Cuenta aprobada" : "❌ Cuenta no aprobada",
+      htmlBody: html,
+    };
 
-        await this.emailService.sendEmail(options);
+    await this.emailService.sendEmail(options);
+  }
+
+  public async updateUser(userId: string, updateDto: UpdateUserDto) {
+    const user = await UserModel.findById(userId);
+    if (!user) throw CustomError.badRequest("User not found");
+
+    if (updateDto.name !== undefined) user.name = updateDto.name;
+    if (updateDto.role !== undefined) user.role = updateDto.role;
+
+    await user.save();
+
+    const { password, ...userEntity } = UserEntity.fromObject(user);
+    return userEntity;
+  }
+
+  public async getUserById(id: string) {
+    try {
+      const user = await UserModel.findById(id);
+      return user;
+    } catch (error) {
+      throw CustomError.internarlServer("Error getting user");
     }
-
-    public async updateUser(userId: string, updateDto: UpdateUserDto) {
-        const user = await UserModel.findById(userId);
-        if (!user) throw CustomError.badRequest('User not found');
-
-        if (updateDto.name !== undefined) user.name = updateDto.name;
-        if (updateDto.role !== undefined) user.role = updateDto.role;
-
-        await user.save();
-
-        const { password, ...userEntity } = UserEntity.fromObject(user);
-        return userEntity;
-    }
-
-    public async getUserById(id: string) {
-        try {
-            const user = await UserModel.findById(id);
-            return user;
-        } catch (error) {
-            throw CustomError.internarlServer('Error getting user');
-        }
-    }
+  }
 }
