@@ -4,79 +4,104 @@ import { UserModel } from "../../data";
 import { UserEntity } from "../../domain";
 
 export class AuthMiddleware {
+  static async validateJWT(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.header("Authorization");
 
-    static async validateJWT(req: Request, res: Response, next: NextFunction) {
-        // 1) Intenta leer la cookie
-        let token = req.cookies?.access_token as string | undefined;
-
-        // 2) Si no hay cookie, busca en el header Authorization
-        if (!token) {
-            const authHeader = req.header('Authorization');
-            if (!authHeader) {
-                return res.status(401).json({ error: 'No token provided' });
-            }
-            if (!authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({ error: 'Invalid Bearer token' });
-            }
-            token = authHeader.split(' ')[1];
-        }
-
-        try {
-            const payload = await JwtAdapter.validateToken<{ id: string }>(token);
-            if (!payload) {
-                return res.status(401).json({ error: 'Invalid token' });
-            }
-
-            const user = await UserModel.findById(payload.id);
-            if (!user) {
-                return res.status(401).json({ error: 'Invalid token - user not found' });
-            }
-
-            // Pongo la entidad en req (puedes usar req.user si amplías la interfaz)
-            (req as any).user = {
-                id: payload.id,
-                role: user.role,
-            };
-
-            next();
-        } catch (err) {
-            console.error(err);
-            res.status(401).json({ error: 'Unauthorized' });
-        }
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
     }
 
-    static optionalJWT = async (req: Request, res: Response, next: NextFunction) => {
-
-        let token = req.cookies.access_token;
-
-        if (!token) {
-            const authHeader = req.header('Authorization');
-            if (!authHeader) {
-                return next();
-            }
-            token = authHeader.split(' ')[1];
-        }
-
-        try {
-            const payload = await JwtAdapter.validateToken<{ id: string }>(token);
-            if (!payload) {
-                return next();
-            }
-
-            const user = await UserModel.findById(payload.id);
-            if (!user) {
-                return res.status(401).json({ error: 'Invalid token - user not found' });
-            }
-
-            (req as any).user = {
-                id: payload.id,
-                role: user.role,
-            };;
-
-            next();
-        } catch (err) {
-            console.error(err);
-            res.status(401).json({ error: 'Unauthorized' });
-        }
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Invalid Bearer token format" });
     }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    try {
+      const payload = await JwtAdapter.validateToken<{ id: string }>(token);
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const user = await UserModel.findById(payload.id);
+      if (!user) {
+        return res
+          .status(401)
+          .json({ error: "Invalid token - user not found" });
+      }
+
+      if (user.approvalStatus !== "APPROVED") {
+        return res.status(401).json({ error: "Account not approved" });
+      }
+
+      (req as any).user = {
+        id: payload.id,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+      };
+
+      next();
+    } catch (err) {
+      console.error("JWT validation error:", err);
+      res.status(401).json({ error: "Unauthorized" });
+    }
+  }
+
+  static optionalJWT = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const authHeader = req.header("Authorization");
+
+    // Si no hay header de autorización, asignar undefined explícitamente
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      (req as any).user = undefined;
+      return next();
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      (req as any).user = undefined;
+      return next();
+    }
+
+    try {
+      const payload = await JwtAdapter.validateToken<{ id: string }>(token);
+      if (!payload) {
+        (req as any).user = undefined;
+        return next();
+      }
+
+      const user = await UserModel.findById(payload.id);
+      if (!user) {
+        (req as any).user = undefined;
+        return next();
+      }
+
+      if (user.approvalStatus !== "APPROVED") {
+        (req as any).user = undefined;
+        return next();
+      }
+
+      // Usuario autenticado exitosamente
+      (req as any).user = {
+        id: payload.id,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+      };
+
+      next();
+    } catch (err) {
+      console.error("Optional JWT validation error:", err);
+      (req as any).user = undefined;
+      next();
+    }
+  };
 }

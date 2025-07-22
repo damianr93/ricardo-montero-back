@@ -35,10 +35,9 @@ export class ProductController {
 
         if (error) return res.status(400).json(error);
 
-        // Manejar la imagen si existe
         let files: UploadedFile[] = [];
         if (req.files && typeof req.files === 'object') {
-            // Aceptar múltiples imágenes bajo el campo 'images' o 'img'
+
             const fileFields = ['img', 'image', 'images'];
 
             fileFields.forEach(field => {
@@ -52,7 +51,6 @@ export class ProductController {
                 }
             });
 
-            // Si no hay coincidencias directas, tomamos todos los archivos del objeto
             if (files.length === 0) {
                 Object.values(req.files).forEach(file => {
                     if (Array.isArray(file)) {

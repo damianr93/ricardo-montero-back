@@ -4,7 +4,6 @@ import { AuthService } from "../services/auth.service";
 import { LoginUserDto } from '../../domain/dtos/auth/login.user.dto';
 import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
 import { UploadedFile } from "express-fileupload";
-import { envs } from "../../config";
 
 export class AuthController {
     constructor(
@@ -33,14 +32,10 @@ export class AuthController {
 
         this.authService.loginUser(loginUserDto!)
             .then(({ user, token }) => {
-                res.cookie('access_token', token, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: envs.SAMESITE === 'strict' ? envs.SAMESITE : "none",
-                    maxAge: 1000 * 60 * 60 * 24,
-                    path: '/'
+                res.json({ 
+                    user,
+                    token
                 });
-                res.json({ user });
             })
             .catch(err => this.handleError(err, res));
     }
@@ -126,15 +121,6 @@ export class AuthController {
     };
 
     logoutUser = (req: Request, res: Response) => {
-        res
-            .clearCookie('access_token', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: envs.SAMESITE === 'strict' ? envs.SAMESITE : "none",
-                path: '/'
-            })
-            .clearCookie('refresh_token')
-            .status(200)
-            .json({ message: 'Logged out successfully' });
+        res.status(200).json({ message: 'Logged out successfully' });
     };
 }
