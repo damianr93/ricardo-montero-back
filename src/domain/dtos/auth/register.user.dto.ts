@@ -1,25 +1,63 @@
-import { regularExps } from "../../../config"
-
+import { regularExps } from "../../../config";
 
 export class RegisterUserDto {
+  private constructor(
+    public name: string,
+    public email: string,
+    public password: string,
+    public razonSocial?: string,
+    public CUIT?: string,
+    public phone?: string,
+    public direccion?: string,
+    public localidad?: string,
+    public provincia?: string,
+    public codigoPostal?: number
+  ) {}
 
-    private constructor(
-        public name:string,
-        public email:string,
-        public password:string
-    ){}
+  static create(object: { [key: string]: any }): [string?, RegisterUserDto?] {
+    const {
+      name,
+      email,
+      password,
+      razonSocial,
+      CUIT,
+      phone,
+      direccion,
+      localidad,
+      provincia,
+      codigoPostal,
+    } = object;
 
-    static create(object:{[key:string]:any}): [string?, RegisterUserDto?]{
+    // Validaciones obligatorias
+    if (!name) return ["Missing name"];
+    if (!email) return ["Missing email"];
+    if (!regularExps.email.test(email)) return ["email is not valid"];
+    if (!password) return ["Missing password"];
+    if (password.length < 6) return ["Password to short"];
 
-        const {name, email, password}=object
-
-        if(!name) return ['Missing name']
-        if(!email) return ['Missing email']
-        if(!regularExps.email.test(email)) return ['email is not valid']
-        if(!password) return ['Missing password']
-        if(password.length < 6) return ['Password to short']
-
-        return [undefined, new RegisterUserDto(name, email, password)]
+    // Validaciones opcionales (si vienen, que sean válidas)
+    if (CUIT && !/^\d{11}$/.test(CUIT)) return ["CUIT must be 11 digits"];
+    if (
+      codigoPostal &&
+      (typeof codigoPostal !== "number" || codigoPostal <= 0)
+    ) {
+      return ["Invalid postal code"];
     }
 
+    return [
+      undefined,
+      new RegisterUserDto(
+        name,
+        email,
+        password,
+        razonSocial,
+        CUIT,
+        phone,
+        direccion,
+        localidad,
+        provincia,
+        codigoPostal
+      ),
+    ];
+  }
 }

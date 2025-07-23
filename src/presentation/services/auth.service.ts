@@ -30,7 +30,7 @@ export class AuthService {
 
       const user = new UserModel({
         ...registerUserDto,
-        email: normalizedEmail, // Guardar el email normalizado
+        email: normalizedEmail, 
         approvalToken,
       });
 
