@@ -45,8 +45,8 @@ export class Server {
       origin: envs.FRONT_URL,
       credentials: true
     }));
-    this.app.use(express.json()); // raw
-    this.app.use(express.urlencoded({ extended: true })); // x-www-form-urlencoded
+    this.app.use(express.json({ limit: '50mb' })); // raw
+    this.app.use(express.urlencoded({ limit: '50mb', extended: true })); // x-www-form-urlencoded
     this.app.use(fileUpload({
       limits: { fileSize: 50 * 1024 * 1024 },
     }));

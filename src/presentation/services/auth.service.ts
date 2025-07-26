@@ -30,7 +30,7 @@ export class AuthService {
 
       const user = new UserModel({
         ...registerUserDto,
-        email: normalizedEmail, 
+        email: normalizedEmail,
         approvalToken,
       });
 
@@ -131,6 +131,14 @@ export class AuthService {
     const approveUrl = `${envs.WEBSERVICE_URL}/api/auth/approve-user/${approvalToken}`;
     const rejectUrl = `${envs.WEBSERVICE_URL}/api/auth/reject-user/${approvalToken}`;
 
+    // Función helper para renderizar campos opcionales
+    const renderOptionalField = (label: string, value: any) => {
+      if (value !== undefined && value !== null && value !== "") {
+        return `<p><strong>${label}:</strong> ${value}</p>`;
+      }
+      return "";
+    };
+
     const html = `
         <!DOCTYPE html>
         <html>
@@ -141,6 +149,8 @@ export class AuthService {
                 .header { background-color: #f4f4f4; padding: 20px; text-align: center; }
                 .content { padding: 20px; }
                 .user-info { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .section { margin-bottom: 15px; }
+                .section-title { color: #0066cc; font-weight: bold; margin-bottom: 8px; }
                 .buttons { text-align: center; margin: 30px 0; }
                 .btn { display: inline-block; padding: 12px 24px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
                 .btn-approve { background-color: #28a745; color: white; }
@@ -160,14 +170,60 @@ export class AuthService {
                     
                     <div class="user-info">
                         <h3>📋 Información del Usuario</h3>
-                        <p><strong>Nombre:</strong> ${user.name}</p>
-                        <p><strong>Email:</strong> ${user.email}</p>
-                        <p><strong>Fecha de registro:</strong> ${new Date().toLocaleString(
-                          "es-ES"
-                        )}</p>
-                        <p><strong>Rol solicitado:</strong> ${user.role.join(
-                          ", "
-                        )}</p>
+                        
+                        <!-- Información básica -->
+                        <div class="section">
+                            <div class="section-title">Datos Básicos</div>
+                            <p><strong>Nombre:</strong> ${user.name}</p>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Fecha de registro:</strong> ${new Date().toLocaleString(
+                              "es-ES"
+                            )}</p>
+                            <p><strong>Rol solicitado:</strong> ${
+                              user.role
+                                ? user.role.join(", ")
+                                : "No especificado"
+                            }</p>
+                        </div>
+
+                        <!-- Información de empresa (si existe) -->
+                        ${
+                          user.razonSocial || user.CUIT
+                            ? `
+                        <div class="section">
+                            <div class="section-title">Información de Empresa</div>
+                            ${renderOptionalField(
+                              "Razón Social",
+                              user.razonSocial
+                            )}
+                            ${renderOptionalField("CUIT", user.CUIT)}
+                        </div>
+                        `
+                            : ""
+                        }
+
+                        <!-- Información de contacto (si existe) -->
+                        ${
+                          user.phone ||
+                          user.direccion ||
+                          user.localidad ||
+                          user.provincia ||
+                          user.codigoPostal
+                            ? `
+                        <div class="section">
+                            <div class="section-title">Información de Contacto</div>
+                            ${renderOptionalField("Teléfono", user.phone)}
+                            ${renderOptionalField("Dirección", user.direccion)}
+                            ${renderOptionalField("Localidad", user.localidad)}
+                            ${renderOptionalField("Provincia", user.provincia)}
+                            ${renderOptionalField(
+                              "Código Postal",
+                              user.codigoPostal
+                            )}
+                        </div>
+                        `
+                            : ""
+                        }
                     </div>
 
                     <p>Por favor, revisa la información y decide si aprobar o rechazar a este usuario:</p>
