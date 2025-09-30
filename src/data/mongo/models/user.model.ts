@@ -77,6 +77,14 @@ const userSchema = new mongoose.Schema({
   rejectedBy: {
     type: String,
   },
+  resetPasswordToken: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
 });
 
 userSchema.set("toJSON", {
@@ -85,7 +93,8 @@ userSchema.set("toJSON", {
   transform: function (doc, ret, options) {
     delete ret._id;
     delete ret.password;
-    delete ret.approvalToken; 
+    delete ret.approvalToken;
+    delete ret.resetPasswordToken; 
   },
 });
 

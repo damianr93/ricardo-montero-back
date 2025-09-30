@@ -3,6 +3,8 @@ import { CustomError, RegisterUserDto } from "../../domain";
 import { AuthService } from "../services/auth.service";
 import { LoginUserDto } from '../../domain/dtos/auth/login.user.dto';
 import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
+import { ForgotPasswordDto } from "../../domain/dtos/auth/forgot-password.dto";
+import { ResetPasswordDto } from "../../domain/dtos/auth/reset-password.dto";
 import { UploadedFile } from "express-fileupload";
 
 export class AuthController {
@@ -123,5 +125,23 @@ export class AuthController {
 
     logoutUser = (req: Request, res: Response) => {
         res.status(200).json({ message: 'Logged out successfully' });
+    };
+
+    forgotPassword = (req: Request, res: Response) => {
+        const [error, forgotPasswordDto] = ForgotPasswordDto.create(req.body);
+        if (error) return res.status(400).json({ error });
+
+        this.authService.forgotPassword(forgotPasswordDto!)
+            .then((result) => res.json(result))
+            .catch(error => this.handleError(error, res));
+    };
+
+    resetPassword = (req: Request, res: Response) => {
+        const [error, resetPasswordDto] = ResetPasswordDto.create(req.body);
+        if (error) return res.status(400).json({ error });
+
+        this.authService.resetPassword(resetPasswordDto!)
+            .then((result) => res.json(result))
+            .catch(error => this.handleError(error, res));
     };
 }

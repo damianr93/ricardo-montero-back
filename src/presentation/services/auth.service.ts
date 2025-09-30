@@ -7,9 +7,12 @@ import {
   UserEntity,
 } from "../../domain";
 import { UpdateUserDto } from "../../domain/dtos/auth/update.user.dto";
+import { ForgotPasswordDto } from "../../domain/dtos/auth/forgot-password.dto";
+import { ResetPasswordDto } from "../../domain/dtos/auth/reset-password.dto";
 import { FileUploadService } from "./file-upload.service";
 import { EmailService } from "./email.service";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 export class AuthService {
   constructor(
@@ -354,6 +357,77 @@ export class AuthService {
     } catch (error) {
       if (error instanceof CustomError) throw error;
       throw CustomError.internarlServer("Error getting user");
+    }
+  }
+
+  public async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    try {
+      const user = await UserModel.findOne({ email: forgotPasswordDto.email.toLowerCase() });
+      
+      if (!user) {
+        return { message: 'Si el email existe, se enviará un enlace de recuperación' };
+      }
+
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpires = new Date(Date.now() + 3600000);
+
+      await UserModel.findByIdAndUpdate(user._id, {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetExpires
+      });
+
+      const resetUrl = `${envs.FRONT_URL}/reset-password?token=${resetToken}`;
+      
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Recuperación de Contraseña</h2>
+          <p>Hola ${user.name},</p>
+          <p>Has solicitado recuperar tu contraseña. Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Recuperar Contraseña</a>
+          </div>
+          <p>Este enlace expirará en 1 hora.</p>
+          <p>Si no solicitaste este cambio, puedes ignorar este email.</p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">Este es un email automático, por favor no respondas.</p>
+        </div>
+      `;
+
+      await this.emailService.sendEmail({
+        to: user.email,
+        subject: 'Recuperación de Contraseña',
+        htmlBody: html
+      });
+
+      return { message: 'Si el email existe, se enviará un enlace de recuperación' };
+    } catch (error) {
+      throw CustomError.internarlServer('Error al procesar la solicitud de recuperación');
+    }
+  }
+
+  public async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    try {
+      const user = await UserModel.findOne({
+        resetPasswordToken: resetPasswordDto.token,
+        resetPasswordExpires: { $gt: new Date() }
+      });
+
+      if (!user) {
+        throw CustomError.badRequest('Token inválido o expirado');
+      }
+
+      const hashedPassword = bcryptAdapter.hash(resetPasswordDto.newPassword);
+
+      await UserModel.findByIdAndUpdate(user._id, {
+        password: hashedPassword,
+        resetPasswordToken: undefined,
+        resetPasswordExpires: undefined
+      });
+
+      return { message: 'Contraseña actualizada exitosamente' };
+    } catch (error) {
+      if (error instanceof CustomError) throw error;
+      throw CustomError.internarlServer('Error al actualizar la contraseña');
     }
   }
 }

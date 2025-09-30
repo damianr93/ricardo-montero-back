@@ -20,6 +20,9 @@ export class AuthRoutes {
     router.put('/me', AuthMiddleware.validateJWT, controller.me);
     router.post('/logout', controller.logoutUser);
 
+    router.post('/forgot-password', controller.forgotPassword);
+    router.post('/reset-password', controller.resetPassword);
+
     router.get('/approve-user/:token', controller.approveUser);
     router.get('/reject-user/:token', controller.rejectUser);
 
