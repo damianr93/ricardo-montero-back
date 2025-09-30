@@ -17,6 +17,7 @@ export class ProductRoutes {
     // Definir las rutas
     router.get('/', [AuthMiddleware.optionalJWT], productController.getProduct);
     router.post('/', [AuthMiddleware.validateJWT], productController.createProduct);
+    router.post('/import', [AuthMiddleware.validateJWT], productController.importProducts);
     router.patch('/:id', [AuthMiddleware.validateJWT], productController.updateProduct);
     router.delete('/:id', [AuthMiddleware.validateJWT], productController.deleteProduct);
 

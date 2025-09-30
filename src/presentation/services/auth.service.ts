@@ -346,9 +346,13 @@ export class AuthService {
 
   public async getUserById(id: string) {
     try {
-      const user = await UserModel.findById(id);
-      return user;
+      const user = await UserModel.findById(id).select('-password -approvalToken');
+      if (!user) {
+        throw CustomError.notFound('Usuario no encontrado');
+      }
+      return UserEntity.fromObject(user.toJSON());
     } catch (error) {
+      if (error instanceof CustomError) throw error;
       throw CustomError.internarlServer("Error getting user");
     }
   }

@@ -114,7 +114,8 @@ export class AuthController {
     me = async (req: Request, res: Response) => {
         try {
             const user = await this.authService.getUserById((req as any).user.id);
-            res.json({ user });
+            const isAdmin = user.role.includes('ADMIN_ROLE');
+            res.json({ user, isAdmin });
         } catch (err) {
             this.handleError(err, res);
         }

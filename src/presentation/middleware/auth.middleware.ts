@@ -22,6 +22,7 @@ export class AuthMiddleware {
 
     try {
       const payload = await JwtAdapter.validateToken<{ id: string }>(token);
+      
       if (!payload) {
         return res.status(401).json({ error: "Invalid token" });
       }
@@ -46,7 +47,7 @@ export class AuthMiddleware {
 
       next();
     } catch (err) {
-      console.error("JWT validation error:", err);
+      console.error("AuthMiddleware - JWT validation error:", err);
       res.status(401).json({ error: "Unauthorized" });
     }
   }
@@ -103,5 +104,19 @@ export class AuthMiddleware {
       (req as any).user = undefined;
       next();
     }
+  };
+
+  static requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).user;
+    
+    if (!user) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+
+    if (!user.role || !user.role.includes('ADMIN_ROLE')) {
+      return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+    }
+
+    next();
   };
 }

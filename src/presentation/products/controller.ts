@@ -140,4 +140,21 @@ export class ProductController {
             .catch(error => this.handleError(error, res))
     };
 
+    importProducts = async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        if (!user.role || user.role[0] !== 'ADMIN_ROLE') {
+            return res.status(403).json({ error: 'Forbidden: You do not have permission to import products.' });
+        }
+
+        const { products } = req.body;
+        
+        if (!products || !Array.isArray(products)) {
+            return res.status(400).json({ error: 'Products array is required' });
+        }
+
+        this.productService.importProducts(products, user.id)
+            .then(result => res.json(result))
+            .catch(error => this.handleError(error, res))
+    };
+
 };

@@ -1,5 +1,5 @@
 import { UploadedFile } from "express-fileupload";
-import { ProductModel } from "../../data";
+import { ProductModel, CategoryModel } from "../../data";
 import { CreateProductDto, CustomError, PaginationDto } from "../../domain";
 import { FileUploadService } from "./file-upload.service";
 import { UpdateProductDto } from "../../domain/dtos/products/update-product.dto";
@@ -173,6 +173,95 @@ export class ProductService {
                 throw error;
             }
             throw CustomError.internarlServer(`${error}`);
+        }
+    }
+
+    async importProducts(products: any[], userId: string) {
+        try {
+            let updated = 0;
+            let notFound = 0;
+            let errors: string[] = [];
+
+            for (const productData of products) {
+                try {
+                    // Buscar producto existente por ID (único identificador inmutable)
+                    let existingProduct = null;
+                    
+                    if (productData.id) {
+                        existingProduct = await ProductModel.findById(productData.id);
+                    } else {
+                        console.log(`Error: Producto sin ID - ${productData.name}`);
+                    }
+
+                    if (existingProduct) {
+                        // Buscar la categoría por nombre si viene como string
+                        let categoryId = productData.category;
+                        if (typeof productData.category === 'string') {
+                            const category = await CategoryModel.findOne({ name: productData.category });
+                            if (category) {
+                                categoryId = category._id;
+                            } else {
+                                categoryId = existingProduct.category; // Mantener la categoría actual
+                            }
+                        }
+
+                        // Preparar datos del Excel
+                        const excelData = {
+                            name: productData.name,
+                            title: productData.title || '',
+                            description: productData.description || '',
+                            codigo: productData.codigo || '',
+                            price: Number(productData.price),
+                            available: Boolean(productData.available),
+                            category: categoryId,
+                            img: productData.img ? (typeof productData.img === 'string' ? productData.img.split(',').map((s: string) => s.trim()) : productData.img) : []
+                        };
+
+                        // Comparar con datos existentes para detectar cambios
+                        const hasChanges = 
+                            existingProduct.name !== excelData.name ||
+                            existingProduct.title !== excelData.title ||
+                            existingProduct.description !== excelData.description ||
+                            existingProduct.codigo !== excelData.codigo ||
+                            existingProduct.price !== excelData.price ||
+                            existingProduct.available !== excelData.available ||
+                            String(existingProduct.category) !== String(excelData.category) ||
+                            JSON.stringify(existingProduct.img) !== JSON.stringify(excelData.img);
+
+                        if (hasChanges) {
+                            try {
+                                const result = await ProductModel.findByIdAndUpdate(existingProduct._id, excelData, { new: true });
+                                
+                                if (result) {
+                                    updated++;
+                                }
+                            } catch (updateError: any) {
+                                errors.push(`Error actualizando producto "${productData.name}": ${updateError.message}`);
+                            }
+                        }
+                    } else {
+                        // Producto no encontrado - no crear nuevos, solo reportar
+                        notFound++;
+                        errors.push(`Producto no encontrado: "${productData.name}" (código: ${productData.codigo})`);
+                    }
+                } catch (error: any) {
+                    errors.push(`Error procesando producto "${productData.name}": ${error.message}`);
+                }
+            }
+
+            console.log(`Importación completada: ${updated} actualizados, ${notFound} no encontrados, ${products.length} total`);
+            
+            return {
+                updated,
+                notFound,
+                total: products.length,
+                errors: errors.length > 0 ? errors : undefined
+            };
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw error;
+            }
+            throw CustomError.internarlServer(`Error importing products: ${error}`);
         }
     }
 }
