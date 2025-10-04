@@ -38,7 +38,7 @@ async function main() {
 
     // 2. Crear categoria
     const categories = await CategoryModel.insertMany(
-        seedData.categories.map(category => {
+        seedData.categories.map((category: any) => {
             return{
                 ...category,
                 user: users[0]._id
@@ -48,7 +48,7 @@ async function main() {
 
     // 3. Crear productos
     const products = await ProductModel.insertMany(
-        seedData.products.map(product => {
+        seedData.products.map((product: any) => {
             return {
                 ...product,
                 user: users[randomBetween0AndX(seedData.users.length - 1)]._id,
