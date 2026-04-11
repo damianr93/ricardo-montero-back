@@ -12,6 +12,13 @@ interface Options {
   public_path?: string;
 }
 
+function corsAllowedOrigins(): string[] {
+  const extra = envs.CORS_EXTRA_ORIGINS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [envs.FRONT_URL, ...extra];
+}
+
 
 export class Server {
 
@@ -41,18 +48,15 @@ export class Server {
       contentSecurityPolicy: false,
     }));
     this.app.use(cookieParser());
-    this.app.use(cors({
-      origin: envs.FRONT_URL,
-      credentials: true, 
+    const corsOptions = {
+      origin: corsAllowedOrigins(),
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-    }));
+    };
+    this.app.use(cors(corsOptions));
 
-    // para los preflight
-    this.app.options('*', cors({
-      origin: envs.FRONT_URL,
-      credentials: true
-    }));
+    this.app.options('*', cors(corsOptions));
     this.app.use(express.json({ limit: '50mb' })); // raw
     this.app.use(express.urlencoded({ limit: '50mb', extended: true })); // x-www-form-urlencoded
     this.app.use(fileUpload({

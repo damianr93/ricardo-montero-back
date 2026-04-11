@@ -11,6 +11,7 @@ API REST que permite registrar usuarios, crear categoriar y productos, validando
 - Límite de frecuencia en login/registro/recuperación de contraseña y en envío de correos de contacto/pedidos (`express-rate-limit`).
 - Escape de HTML en plantillas de correo (pedidos, contacto, aprobación de usuarios, recuperación de contraseña) para evitar inyección en clientes de correo.
 - Tras un proxy inverso o balanceador, definir `TRUST_PROXY=true` en `.env` para que los límites por IP usen la IP real del cliente.
+- CORS: `FRONT_URL` es el origen del front en producción. Para Vite en local (`http://localhost:5179`), añade `CORS_EXTRA_ORIGINS=http://localhost:5179` (varios separados por coma). En producción puedes dejarlo vacío si solo usas un dominio.
 
 ## Instalación
 

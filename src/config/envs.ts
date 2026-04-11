@@ -29,6 +29,8 @@ export const envs = {
 
   TRUST_PROXY: get('TRUST_PROXY').default('false').asBool(),
 
+  CORS_EXTRA_ORIGINS: get('CORS_EXTRA_ORIGINS').default('').asString(),
+
 }
 
 
