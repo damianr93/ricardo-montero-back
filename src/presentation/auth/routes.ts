@@ -4,6 +4,7 @@ import { AuthService } from '../services';
 import { FileUploadService } from '../services/file-upload.service';
 import { EmailService } from '../services/email.service';
 import { AuthMiddleware } from '../middleware/auth.middleware';
+import { authSensitiveLimiter } from '../middleware/rate-limit.middleware';
 
 export class AuthRoutes {
   static get routes(): Router {
@@ -14,14 +15,14 @@ export class AuthRoutes {
     const authService = new AuthService(fileUploadService, emailService);
     const controller = new AuthController(authService);
 
-    router.post('/login', controller.loginUser);
-    router.post('/register', controller.registerUser);
+    router.post('/login', authSensitiveLimiter, controller.loginUser);
+    router.post('/register', authSensitiveLimiter, controller.registerUser);
     router.patch('/update/:id', AuthMiddleware.validateJWT, controller.updateUser);
     router.put('/me', AuthMiddleware.validateJWT, controller.me);
     router.post('/logout', controller.logoutUser);
 
-    router.post('/forgot-password', controller.forgotPassword);
-    router.post('/reset-password', controller.resetPassword);
+    router.post('/forgot-password', authSensitiveLimiter, controller.forgotPassword);
+    router.post('/reset-password', authSensitiveLimiter, controller.resetPassword);
 
     router.get('/approve-user/:token', controller.approveUser);
     router.get('/reject-user/:token', controller.rejectUser);

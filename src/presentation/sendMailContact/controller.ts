@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { EmailService, SendMailOptions } from "../services/email.service";
+import { escapeHtml, sanitizeEmailSubjectFragment } from "../../config/html.util";
 
 export class SendOrderController {
   constructor(private readonly emailService: EmailService) {}
@@ -19,20 +20,25 @@ export class SendOrderController {
           .json({ error: "Datos incompletos o inválidos en el pedido." });
       }
 
+      const safeName = escapeHtml(String(name));
+      const safeSurname = surname != null && surname !== "" ? escapeHtml(String(surname)) : "";
+      const safePhone = escapeHtml(String(phone));
+
       const itemsHtml = items
-        .map(({ product, quantity }) => {
+        .map(({ product, quantity }: { product: any; quantity: number }) => {
           const productName = product.title || product.name;
+          const safeProductName = escapeHtml(String(productName ?? ""));
           const productCode = product.codigo
-            ? ` (Código: ${product.codigo})`
+            ? ` (Código: ${escapeHtml(String(product.codigo))})`
             : "";
           const productPrice = (product.price * quantity).toFixed(2);
           const productDescription = product.description
-            ? `<br/><small>${product.description}</small>`
+            ? `<br/><small>${escapeHtml(String(product.description))}</small>`
             : "";
 
           return `
         <li>
-          <strong>${productName}</strong>${productCode} x${quantity} - $${productPrice}
+          <strong>${safeProductName}</strong>${productCode} x${quantity} - $${productPrice}
           ${productDescription}
         </li>
       `;
@@ -58,13 +64,13 @@ export class SendOrderController {
       <body>
         <div class="container">
           <h1>🛒 Nuevo pedido recibido</h1>
-          <div class="field"><span class="label">Nombre:</span> ${name}</div>
+          <div class="field"><span class="label">Nombre:</span> ${safeName}</div>
           ${
-            surname
-              ? `<div class="field"><span class="label">Apellido:</span> ${surname}</div>`
+            safeSurname
+              ? `<div class="field"><span class="label">Apellido:</span> ${safeSurname}</div>`
               : ""
           }
-          <div class="field"><span class="label">Teléfono:</span> ${phone}</div>
+          <div class="field"><span class="label">Teléfono:</span> ${safePhone}</div>
           <div class="field">
             <span class="label">Productos solicitados:</span>
             <ul class="item-list">
@@ -82,7 +88,7 @@ export class SendOrderController {
 
       const sendOptions: SendMailOptions = {
         to: 'ab.mariavirginiamontero@gmail.com',
-        subject: `🛒 Nuevo pedido de ${name}`,
+        subject: `🛒 Nuevo pedido de ${sanitizeEmailSubjectFragment(String(name))}`,
         htmlBody,
       };
 
@@ -103,6 +109,17 @@ export class SendOrderController {
           .json({ error: "Datos incompletos o inválidos en el pedido." });
       }
 
+      const safeName = escapeHtml(String(name));
+      const safeCorreo = escapeHtml(String(correo));
+      const safeLocalidad = escapeHtml(String(localidad));
+      const safeTelefono = escapeHtml(String(telefono));
+      const safeEmpresa =
+        empresa != null && empresa !== "" ? escapeHtml(String(empresa)) : "";
+      const safeMensaje =
+        mensaje != null && mensaje !== ""
+          ? escapeHtml(String(mensaje)).replace(/\n/g, "<br/>")
+          : "";
+
       const htmlBody = `
       <!DOCTYPE html>
       <html lang="es">
@@ -121,18 +138,18 @@ export class SendOrderController {
       <body>
         <div class="container">
           <h1>📩 Nueva consulta recibida</h1>
-          <div class="field"><span class="label">Nombre:</span> ${name}</div>
-          <div class="field"><span class="label">Correo:</span> ${correo}</div>
-          <div class="field"><span class="label">Teléfono:</span> ${telefono}</div>
-          <div class="field"><span class="label">Localidad:</span> ${localidad}</div>
+          <div class="field"><span class="label">Nombre:</span> ${safeName}</div>
+          <div class="field"><span class="label">Correo:</span> ${safeCorreo}</div>
+          <div class="field"><span class="label">Teléfono:</span> ${safeTelefono}</div>
+          <div class="field"><span class="label">Localidad:</span> ${safeLocalidad}</div>
           ${
-            empresa
-              ? `<div class="field"><span class="label">Empresa:</span> ${empresa}</div>`
+            safeEmpresa
+              ? `<div class="field"><span class="label">Empresa:</span> ${safeEmpresa}</div>`
               : ""
           }
           ${
-            mensaje
-              ? `<div class="message"><span class="label">Mensaje:</span><br>${mensaje}</div>`
+            safeMensaje
+              ? `<div class="message"><span class="label">Mensaje:</span><br>${safeMensaje}</div>`
               : ""
           }
           <div class="footer">Este mensaje fue enviado automáticamente desde Autogestión Lince SA.</div>
@@ -143,7 +160,7 @@ export class SendOrderController {
 
       const sendOptions: SendMailOptions = {
         to: "ab.mariavirginiamontero@gmail.com",
-        subject: `Nueva consulta de ${name}`,
+        subject: `Nueva consulta de ${sanitizeEmailSubjectFragment(String(name))}`,
         htmlBody,
       };
 

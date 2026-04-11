@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fileUpload from 'express-fileupload';
 import cookieParser from 'cookie-parser'
+import helmet from 'helmet';
 import { envs } from '../config';
 
 interface Options {
@@ -29,9 +30,16 @@ export class Server {
 
   async start() {
 
+    if (envs.TRUST_PROXY) {
+      this.app.set('trust proxy', 1);
+    }
 
     //* Middlewares
   
+    this.app.use(helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: false,
+    }));
     this.app.use(cookieParser());
     this.app.use(cors({
       origin: envs.FRONT_URL,

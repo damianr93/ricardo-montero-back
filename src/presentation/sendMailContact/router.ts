@@ -3,6 +3,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { EmailService } from '../services/email.service';
 import { envs } from '../../config/envs';
 import { SendOrderController } from './controller';
+import { sendEmailLimiter } from '../middleware/rate-limit.middleware';
 
 
 
@@ -15,6 +16,7 @@ const controller = new SendOrderController(emailService);
 const sendEmailRouter = Router();
 sendEmailRouter.post(
   '/',
+  sendEmailLimiter,
   (req: Request, res: Response, next: NextFunction) => {
     controller.sendOrder(req, res, next).catch(next);
   },
@@ -22,6 +24,7 @@ sendEmailRouter.post(
 
 sendEmailRouter.post(
   '/contact',
+  sendEmailLimiter,
   (req: Request, res: Response, next: NextFunction) => {
     controller.sendContact(req, res, next).catch(next);
   },

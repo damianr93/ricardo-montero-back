@@ -27,6 +27,8 @@ export const envs = {
 
   SAMESITE: get('SAMESITE').asString(),
 
+  TRUST_PROXY: get('TRUST_PROXY').default('false').asBool(),
+
 }
 
 

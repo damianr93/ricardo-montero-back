@@ -1,4 +1,5 @@
 import { JwtAdapter, bcryptAdapter, envs } from "../../config";
+import { escapeHtml } from "../../config/html.util";
 import { UserModel } from "../../data";
 import {
   CustomError,
@@ -137,7 +138,7 @@ export class AuthService {
     // Función helper para renderizar campos opcionales
     const renderOptionalField = (label: string, value: any) => {
       if (value !== undefined && value !== null && value !== "") {
-        return `<p><strong>${label}:</strong> ${value}</p>`;
+        return `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(value))}</p>`;
       }
       return "";
     };
@@ -177,14 +178,14 @@ export class AuthService {
                         <!-- Información básica -->
                         <div class="section">
                             <div class="section-title">Datos Básicos</div>
-                            <p><strong>Nombre:</strong> ${user.name}</p>
-                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Nombre:</strong> ${escapeHtml(user.name)}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
                             <p><strong>Fecha de registro:</strong> ${new Date().toLocaleString(
                               "es-ES"
                             )}</p>
                             <p><strong>Rol solicitado:</strong> ${
                               user.role
-                                ? user.role.join(", ")
+                                ? escapeHtml(user.role.join(", "))
                                 : "No especificado"
                             }</p>
                         </div>
@@ -280,13 +281,13 @@ export class AuthService {
                     <h1>🎉 ¡Cuenta Aprobada!</h1>
                 </div>
                 <div class="content">
-                    <h2>Hola ${name},</h2>
+                    <h2>Hola ${escapeHtml(name)},</h2>
                     <div class="success">
                         <p><strong>¡Excelentes noticias!</strong> Tu cuenta ha sido aprobada por nuestro administrador.</p>
                     </div>
                     <p>Ya puedes iniciar sesión en la plataforma con tus credenciales:</p>
                     <ul>
-                        <li><strong>Email:</strong> ${email}</li>
+                        <li><strong>Email:</strong> ${escapeHtml(email)}</li>
                         <li><strong>Contraseña:</strong> La que registraste</li>
                     </ul>
                     <p>¡Bienvenido a nuestra plataforma!</p>
@@ -313,7 +314,7 @@ export class AuthService {
                     <h1>❌ Cuenta No Aprobada</h1>
                 </div>
                 <div class="content">
-                    <h2>Hola ${name},</h2>
+                    <h2>Hola ${escapeHtml(name)},</h2>
                     <div class="error">
                         <p>Lamentamos informarte que tu solicitud de registro no ha sido aprobada en este momento.</p>
                     </div>
@@ -381,7 +382,7 @@ export class AuthService {
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Recuperación de Contraseña</h2>
-          <p>Hola ${user.name},</p>
+          <p>Hola ${escapeHtml(user.name)},</p>
           <p>Has solicitado recuperar tu contraseña. Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Recuperar Contraseña</a>
