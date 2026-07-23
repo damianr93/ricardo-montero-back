@@ -1,6 +1,7 @@
 // File: src/routes/sendEmailRouter.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { EmailService } from '../services/email.service';
+import { SettingService } from '../services/setting.service';
 import { envs } from '../../config/envs';
 import { SendOrderController } from './controller';
 import { sendEmailLimiter } from '../middleware/rate-limit.middleware';
@@ -8,9 +9,10 @@ import { sendEmailLimiter } from '../middleware/rate-limit.middleware';
 
 
 const emailService = new EmailService();
+const settingService = new SettingService();
 
 
-const controller = new SendOrderController(emailService);
+const controller = new SendOrderController(emailService, settingService);
 
 
 const sendEmailRouter = Router();

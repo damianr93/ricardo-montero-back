@@ -5,6 +5,7 @@ import { ProductRoutes } from './products/routes';
 import { FileUploadRoutes } from './file-upload/routes';
 import { ImageRoutes } from './images/routes';
 import { UserRoutes } from './users/routes';
+import { SettingRoutes } from './settings/routes';
 import sendEmailRouter from './sendMailContact/router';
 
 
@@ -24,6 +25,7 @@ export class AppRoutes {
     router.use('/api/users', UserRoutes.routes);
     router.use('/api/upload',  FileUploadRoutes.routes);
     router.use('/api/images',  ImageRoutes.routes);
+    router.use('/api/settings',  SettingRoutes.routes);
     router.use('/api/sendEmail',  sendEmailRouter);
 
     return router;

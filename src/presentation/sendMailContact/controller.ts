@@ -1,9 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { EmailService, SendMailOptions } from "../services/email.service";
+import { SettingService } from "../services/setting.service";
 import { escapeHtml, sanitizeEmailSubjectFragment } from "../../config/html.util";
 
 export class SendOrderController {
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly settingService: SettingService,
+  ) {}
 
   sendOrder = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -18,6 +22,21 @@ export class SendOrderController {
         return res
           .status(400)
           .json({ error: "Datos incompletos o inválidos en el pedido." });
+      }
+
+      // Recalcular el total en el servidor: no se confía en el total del cliente
+      // para validar el mínimo de compra (puede manipularse).
+      const computedTotal = items.reduce(
+        (sum: number, { product, quantity }: { product: any; quantity: number }) =>
+          sum + (Number(product?.price) || 0) * (Number(quantity) || 0),
+        0
+      );
+
+      const { minOrderAmount } = await this.settingService.getSettings();
+      if (minOrderAmount > 0 && computedTotal < minOrderAmount) {
+        return res.status(400).json({
+          error: `El pedido no alcanza el monto mínimo de compra ($${minOrderAmount}).`,
+        });
       }
 
       const safeName = escapeHtml(String(name));
