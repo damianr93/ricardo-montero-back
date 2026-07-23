@@ -1,3 +1,4 @@
+import fs from 'fs'
 import { UploadedFile } from 'express-fileupload'
 import { envs, Uuid } from '../../config'
 import { CustomError } from '../../domain'
@@ -45,8 +46,24 @@ export class FileUploadService {
         // finalmente el fileName
         const fileName = `${folder}/${baseName}-${id}.${ext}`;
 
-        // subir y retornar
-        await this.aws.uploadBuffer(fileName, file.data, file.mimetype);
+        // Con useTempFiles el fichero está en disco (file.data viene vacío):
+        // se sube por stream para no cargarlo entero en memoria. Fallback a
+        // buffer si por config no hubiese archivo temporal.
+        if (file.tempFilePath) {
+            const stream = fs.createReadStream(file.tempFilePath);
+            // Evita que un error tardío del stream (p. ej. el temporal ya
+            // borrado) escale a 'uncaughtException' y tumbe el proceso.
+            stream.on('error', () => { });
+            try {
+                await this.aws.uploadStream(fileName, stream, file.mimetype, file.size);
+            } finally {
+                stream.destroy();
+                await fs.promises.unlink(file.tempFilePath).catch(() => { });
+            }
+        } else {
+            await this.aws.uploadBuffer(fileName, file.data, file.mimetype);
+        }
+
         const url = `https://${envs.AWS_S3_BUCKET}.s3.${envs.AWS_REGION}.amazonaws.com/${fileName}`;
         return { fileName, url };
     }

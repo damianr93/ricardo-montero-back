@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import cors from 'cors';
 import path from 'path';
+import os from 'os';
 import fileUpload from 'express-fileupload';
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet';
@@ -59,8 +60,14 @@ export class Server {
     this.app.options('*', cors(corsOptions));
     this.app.use(express.json({ limit: '50mb' })); // raw
     this.app.use(express.urlencoded({ limit: '50mb', extended: true })); // x-www-form-urlencoded
+    // useTempFiles streams uploads to disk instead of buffering the whole file
+    // (up to 50MB each) in RAM — the previous behaviour caused heap OOM crashes
+    // when several images were uploaded at once.
     this.app.use(fileUpload({
       limits: { fileSize: 50 * 1024 * 1024 },
+      useTempFiles: true,
+      tempFileDir: os.tmpdir(),
+      abortOnLimit: true,
     }));
 
     //* Public Folder

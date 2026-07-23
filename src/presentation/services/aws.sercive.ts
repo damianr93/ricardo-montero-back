@@ -1,4 +1,5 @@
 import { PutObjectCommand, S3Client, ListObjectsV2Command, DeleteObjectCommand, ListObjectsV2CommandOutput } from '@aws-sdk/client-s3'
+import { Readable } from 'stream'
 import { envs } from '../../config'
 
 export class AwsService {
@@ -28,6 +29,31 @@ export class AwsService {
       Body: body,
       ContentType: contentType,
       // ACL: 'public-read',
+      CacheControl: 'max-age=0',
+    })
+    await this.s3Client.send(cmd)
+  }
+
+  /**
+   * Sube un stream a S3 sin cargar el fichero completo en memoria.
+   * Requiere contentLength conocido para que el SDK no bufferice el stream.
+   * @param key Ruta dentro del bucket
+   * @param body Stream legible con el contenido del fichero
+   * @param contentType MIME type
+   * @param contentLength Tamaño exacto del fichero en bytes
+   */
+  async uploadStream(
+    key: string,
+    body: Readable,
+    contentType: string,
+    contentLength: number
+  ): Promise<void> {
+    const cmd = new PutObjectCommand({
+      Bucket: envs.AWS_S3_BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      ContentLength: contentLength,
       CacheControl: 'max-age=0',
     })
     await this.s3Client.send(cmd)
